@@ -1,10 +1,11 @@
+import os
+
 import tensorflow as tf
 import tensorflow.keras as tfk
 
 from tensorflow.keras.layers import Conv2D, Dense, Flatten
 
 NUM_CLASSES = 10
-
 
 def convert_model(model: tfk.Sequential):
     path = 'model'
@@ -41,6 +42,33 @@ def train_simple_model():
     return model
 
 
+def generate_image_cpp_files(x, y, num_images=10):
+    file_name = 'images'
+    file_path = 'C:\\Users\\Julian\\Documents\\PlatformIO\\Projects\\alto4arduino\\src\\'
+    img_size = 28
+    cpp_file = f'#include "{file_name}.h"\n\nunsigned int size = {img_size};\n\n'
+    header_file = f'#pragma once\n\n'
+
+    for img_no in range(num_images):
+        header_file += f'extern const unsigned int y_{img_no};\n'
+        header_file += f'extern const unsigned char img_{img_no}[{img_size}][{img_size}];\n\n'
+
+        cpp_file += f'const unsigned int y_{img_no} = {y[img_no]};\n'
+        cpp_file += f'const unsigned char img_{img_no}[{img_size}][{img_size}] = {{\n'
+        for i in range(img_size):
+            cpp_file += '{'
+            for j in range(img_size):
+                cpp_file += f'0x{int(x[img_no][i][j]):02x}, '
+            cpp_file = f'{cpp_file[:-2]}}},\n'
+
+        cpp_file += f'}};\n\n'
+
+    cpp_f = open(f'{file_path}{file_name}.cpp', 'w')
+    header_f = open(f'{file_path}{file_name}.h', 'w')
+    cpp_f.write(cpp_file)
+    header_f.write(header_file)
+
+
 (x_train, y_train), (x_test, y_test) = tfk.datasets.fashion_mnist.load_data()
 x_train = x_train.reshape(x_train.shape[0], 28, 28, 1)
 x_test = x_test.reshape(x_test.shape[0], 28, 28, 1)
@@ -51,3 +79,4 @@ y_test_categorical = tfk.utils.to_categorical(y_test, NUM_CLASSES)
 
 simple_model = train_simple_model()
 convert_model(simple_model)
+generate_image_cpp_files(x_test, y_test)
