@@ -19,12 +19,13 @@ constexpr int kTensorArenaSize = 2000;
 uint8_t tensor_arena[kTensorArenaSize];
 
 void setup() {
+  delay(5000);
   pinMode(LED_BUILTIN, OUTPUT);
   tflite::InitializeTarget();
 
   static tflite::MicroErrorReporter micro_error_reporter;
   error_reporter = &micro_error_reporter;
-
+  TF_LITE_REPORT_ERROR(error_reporter, "Starting Setup proc");
   model = tflite::GetModel(python_model_tflite);
 
   static tflite::AllOpsResolver resolver;
@@ -41,10 +42,11 @@ void setup() {
   input = interpreter->input(0);
   output = interpreter->output(0);
 
+  TF_LITE_REPORT_ERROR(error_reporter, "Dims: %d | %d - %d", input->dims->size, input->dims->data[0], input->dims->data[1]);
   inference_count = 0;
 }
 
 void loop() {
-  digitalWrite(LED_BUILTIN, 1);
-  
+  //digitalWrite(LED_BUILTIN, 1);
+
 }
