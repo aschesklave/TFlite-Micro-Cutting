@@ -46,22 +46,21 @@ def generate_image_cpp_files(x, y, num_images=10):
     file_name = 'images'
     file_path = 'C:\\Users\\Julian\\Documents\\PlatformIO\\Projects\\alto4arduino\\src\\'
     img_size = 28
-    cpp_file = f'#include "{file_name}.h"\n\nunsigned int size = {img_size};\n\n'
-    header_file = f'#pragma once\n\n'
+    cpp_file = f'#include "{file_name}.h"\n\nconst unsigned int size = {img_size};\n\n'
+    header_file = f'#pragma once\n\nextern const unsigned int size;\n\n'
 
     for img_no in range(num_images):
         header_file += f'extern const unsigned int y_{img_no};\n'
-        header_file += f'extern const unsigned char img_{img_no}[{img_size}][{img_size}];\n\n'
+        header_file += f'extern const unsigned char img_{img_no}[{img_size * img_size}];\n\n'
 
         cpp_file += f'const unsigned int y_{img_no} = {y[img_no]};\n'
-        cpp_file += f'const unsigned char img_{img_no}[{img_size}][{img_size}] = {{\n'
+        cpp_file += f'const unsigned char img_{img_no}[{img_size * img_size}] = {{\n'
         for i in range(img_size):
-            cpp_file += '{'
             for j in range(img_size):
                 cpp_file += f'0x{int(x[img_no][i][j]):02x}, '
-            cpp_file = f'{cpp_file[:-2]}}},\n'
+            cpp_file += '\n'
 
-        cpp_file += f'}};\n\n'
+        cpp_file = cpp_file[:-3] + '};\n\n'
 
     cpp_f = open(f'{file_path}{file_name}.cpp', 'w')
     header_f = open(f'{file_path}{file_name}.h', 'w')
