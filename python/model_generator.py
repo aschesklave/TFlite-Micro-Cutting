@@ -32,7 +32,7 @@ def train_simple_model():
     img_shape = x_train[0].shape
     model = tfk.Sequential([
         tfk.Input(shape=img_shape),
-        Conv2D(24, kernel_size=3, activation='relu'),
+        Conv2D(12, kernel_size=3, activation='relu'),
         Flatten(),
         Dense(NUM_CLASSES, activation='softmax')
     ])
@@ -78,4 +78,4 @@ y_test_categorical = tfk.utils.to_categorical(y_test, NUM_CLASSES)
 
 simple_model = train_simple_model()
 convert_model(simple_model)
-generate_image_cpp_files(x_test, y_test)
+#generate_image_cpp_files(x_test, y_test)

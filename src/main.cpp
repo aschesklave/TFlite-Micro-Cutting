@@ -1,130 +1,123 @@
-#include <Arduino.h>
+/* Copyright 2020 The TensorFlow Authors. All Rights Reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+==============================================================================*/
+
 #include <TensorFlowLite.h>
 
-#include "model.h"
-#include "images.h"
-#include "tensorflow/lite/schema/schema_generated.h"
-#include "tensorflow/lite/micro/system_setup.h"
-#include "tensorflow/lite/micro/micro_interpreter.h"
-#include "tensorflow/lite/micro/all_ops_resolver.h"
-#include "tensorflow/lite/micro/micro_error_reporter.h"
+#include "main_functions.h"
 
+#include "tensorflow/lite/micro/all_ops_resolver.h"
+#include "constants.h"
+#include "model.h"
+#include "output_handler.h"
+#include "tensorflow/lite/micro/micro_error_reporter.h"
+#include "tensorflow/lite/micro/micro_interpreter.h"
+#include "tensorflow/lite/micro/system_setup.h"
+#include "tensorflow/lite/schema/schema_generated.h"
+
+// Globals, used for compatibility with Arduino-style sketches.
+namespace {
+tflite::ErrorReporter* error_reporter = nullptr;
 const tflite::Model* model = nullptr;
 tflite::MicroInterpreter* interpreter = nullptr;
-tflite::ErrorReporter* error_reporter = nullptr;
 TfLiteTensor* input = nullptr;
 TfLiteTensor* output = nullptr;
 int inference_count = 0;
 
-constexpr int kTensorArenaSize = 150000;
+constexpr int kTensorArenaSize = 2000;
 uint8_t tensor_arena[kTensorArenaSize];
+}  // namespace
 
-const uint8_t* images[10];
-unsigned int truth[10];
-
+// The name of this function is important for Arduino compatibility.
 void setup() {
-  delay(5000);
-  pinMode(LED_BUILTIN, OUTPUT);
   tflite::InitializeTarget();
-  digitalWrite(LED_BUILTIN, 0);
+
+  // Set up logging. Google style is to avoid globals or statics because of
+  // lifetime uncertainty, but since this has a trivial destructor it's okay.
+  // NOLINTNEXTLINE(runtime-global-variables)
   static tflite::MicroErrorReporter micro_error_reporter;
   error_reporter = &micro_error_reporter;
-  TF_LITE_REPORT_ERROR(error_reporter, "Starting Setup proc");
-  model = tflite::GetModel(python_model_tflite);
 
+  // Map the model into a usable data structure. This doesn't involve any
+  // copying or parsing, it's a very lightweight operation.
+  model = tflite::GetModel(g_model);
+  if (model->version() != TFLITE_SCHEMA_VERSION) {
+    TF_LITE_REPORT_ERROR(error_reporter,
+                         "Model provided is schema version %d not equal "
+                         "to supported version %d.",
+                         model->version(), TFLITE_SCHEMA_VERSION);
+    return;
+  }
+
+  // This pulls in all the operation implementations we need.
+  // NOLINTNEXTLINE(runtime-global-variables)
   static tflite::AllOpsResolver resolver;
+
+  // Build an interpreter to run the model with.
   static tflite::MicroInterpreter static_interpreter(
       model, resolver, tensor_arena, kTensorArenaSize, error_reporter);
   interpreter = &static_interpreter;
 
+  // Allocate memory from the tensor_arena for the model's tensors.
   TfLiteStatus allocate_status = interpreter->AllocateTensors();
   if (allocate_status != kTfLiteOk) {
     TF_LITE_REPORT_ERROR(error_reporter, "AllocateTensors() failed");
     return;
   }
 
-  output = interpreter->output(0);
+  // Obtain pointers to the model's input and output tensors.
   input = interpreter->input(0);
-  if ((input->dims->size != 4) || (input->dims->data[0] != 1) ||
-      (input->dims->data[1] != (int)size) ||
-      (input->dims->data[2] != (int)size) ||
-      (input->dims->data[3] != 1) || (input->type != kTfLiteFloat32)) {
-    TF_LITE_REPORT_ERROR(error_reporter,
-                         "Bad input tensor parameters in model");
+  output = interpreter->output(0);
+
+  // Keep track of how many inferences we have performed.
+  inference_count = 0;
+}
+
+// The name of this function is important for Arduino compatibility.
+void loop() {
+  // Calculate an x value to feed into the model. We compare the current
+  // inference_count to the number of inferences per cycle to determine
+  // our position within the range of possible x values the model was
+  // trained on, and use this to calculate a value.
+  float position = static_cast<float>(inference_count) /
+                   static_cast<float>(kInferencesPerCycle);
+  float x = position * kXrange;
+
+  // Quantize the input from floating-point to integer
+  int8_t x_quantized = x / input->params.scale + input->params.zero_point;
+  // Place the quantized input in the model's input tensor
+  input->data.int8[0] = x_quantized;
+
+  // Run inference, and report any error
+  TfLiteStatus invoke_status = interpreter->Invoke();
+  if (invoke_status != kTfLiteOk) {
+    TF_LITE_REPORT_ERROR(error_reporter, "Invoke failed on x: %f\n",
+                         static_cast<double>(x));
     return;
   }
 
-  TF_LITE_REPORT_ERROR(error_reporter, "Dims: %d | %d - %d - %d - %d", input->dims->size, input->dims->data[0], input->dims->data[1], input->dims->data[2], input->dims->data[3]);
-  inference_count = 0;
-  images[0] = img_0;
-  images[1] = img_1;
-  images[2] = img_2;
-  images[3] = img_3;
-  images[4] = img_4;
-  images[5] = img_5;
-  images[6] = img_6;
-  images[7] = img_7;
-  images[8] = img_8;
-  images[9] = img_9;
+  // Obtain the quantized output from model's output tensor
+  int8_t y_quantized = output->data.int8[0];
+  // Dequantize the output from integer to floating-point
+  float y = (y_quantized - output->params.zero_point) * output->params.scale;
 
-  truth[0] = y_0;
-  truth[1] = y_1;
-  truth[2] = y_2;
-  truth[3] = y_3;
-  truth[4] = y_4;
-  truth[5] = y_5;
-  truth[6] = y_6;
-  truth[7] = y_7;
-  truth[8] = y_8;
-  truth[9] = y_9;
-  
-  TF_LITE_REPORT_ERROR(error_reporter, "Starting loop ...");
-}
+  // Output the results. A custom HandleOutput function can be implemented
+  // for each supported hardware target.
+  HandleOutput(error_reporter, x, y);
 
-void loop() {
-  digitalWrite(LED_BUILTIN, 1);
-  TF_LITE_REPORT_ERROR(error_reporter, "Running Inference!");
-  for(int img_no = 0; img_no < 10; ++img_no)
-  {
-    //TF_LITE_REPORT_ERROR(error_reporter, "Loading data for image %d", img_no);
-    const uint8_t* curr_img = images[img_no];
-    TF_LITE_REPORT_ERROR(error_reporter, "1");
-    float* image_data = input->data.f;
-    TF_LITE_REPORT_ERROR(error_reporter, "2");
-    for(unsigned int i = 0; i < size * size; ++i)
-    {
-      *image_data++ = curr_img[i] / 255.0f;
-    }
-    TF_LITE_REPORT_ERROR(error_reporter, "3");
-    //TF_LITE_REPORT_ERROR(error_reporter, "Running inference ...");
-    if (kTfLiteOk != interpreter->Invoke()) {
-      TF_LITE_REPORT_ERROR(error_reporter, "Invoke failed.");
-    }
-    TF_LITE_REPORT_ERROR(error_reporter, "4");
-    TfLiteTensor* output = interpreter->output(0);
-    TF_LITE_REPORT_ERROR(error_reporter, "5");
-    float max_percentage = -1;
-    unsigned int prediction = 666;
-    for(int class_idx = 0; class_idx < 10; ++class_idx)
-    {
-      //TF_LITE_REPORT_ERROR(error_reporter, "Class %d: %f", class_idx, output->data.f[class_idx]);
-      if(output->data.f[class_idx] > max_percentage)
-      {
-        max_percentage = output->data.f[class_idx];
-        prediction = class_idx;
-      }
-    }
-    TF_LITE_REPORT_ERROR(error_reporter, "6");
-    if(prediction == truth[img_no])
-    {
-      TF_LITE_REPORT_ERROR(error_reporter, "Prediction for image %d was correct!", img_no);
-    }
-    else
-    {
-      TF_LITE_REPORT_ERROR(error_reporter, "Prediction for image %d was false! Truth: %d | Prediction: %d", img_no, truth[img_no], prediction);
-    }
-    TF_LITE_REPORT_ERROR(error_reporter, "7");
-  }
-  digitalWrite(LED_BUILTIN, 0);
-  delay(10000);
+  // Increment the inference_counter, and reset it if we have reached
+  // the total number per cycle
+  inference_count += 1;
+  if (inference_count >= kInferencesPerCycle) inference_count = 0;
 }
