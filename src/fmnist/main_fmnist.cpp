@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <TensorFlowLite.h>
 
-#include "model.h"
+#include "model_fmnist.h"
 #include "images.h"
 #include "tensorflow/lite/schema/schema_generated.h"
 #include "tensorflow/lite/micro/system_setup.h"
