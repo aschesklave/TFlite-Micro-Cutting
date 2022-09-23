@@ -539,7 +539,7 @@ template<> struct QuantizationDetailsTraits<tflite::CustomQuantization> {
 
 struct QuantizationDetailsUnion {
   QuantizationDetails type;
-  void *value;
+  void *value; //TODO: Values = Data???
 
   QuantizationDetailsUnion() : type(QuantizationDetails_NONE), value(nullptr) {}
   QuantizationDetailsUnion(QuantizationDetailsUnion&& u) FLATBUFFERS_NOEXCEPT :
@@ -3963,6 +3963,7 @@ inline flatbuffers::Offset<SparsityParameters> CreateSparsityParametersDirect(
 
 flatbuffers::Offset<SparsityParameters> CreateSparsityParameters(flatbuffers::FlatBufferBuilder &_fbb, const SparsityParametersT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
 
+//TODO: Tensor to change?
 struct TensorT : public flatbuffers::NativeTable {
   typedef Tensor TableType;
   std::vector<int32_t> shape;
@@ -16137,7 +16138,15 @@ inline void Model::UnPackTo(ModelT *_o, const flatbuffers::resolver_function_t *
   (void)_o;
   (void)_resolver;
   { auto _e = version(); _o->version = _e; }
-  { auto _e = operator_codes(); if (_e) { _o->operator_codes.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->operator_codes[_i] = std::unique_ptr<tflite::OperatorCodeT>(_e->Get(_i)->UnPack(_resolver)); } } }
+  { 
+    auto _e = operator_codes(); 
+    if (_e) { 
+      _o->operator_codes.resize(_e->size());
+      for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) {
+        _o->operator_codes[_i] = std::unique_ptr<tflite::OperatorCodeT>(_e->Get(_i)->UnPack(_resolver));
+      }
+    }
+  }
   { auto _e = subgraphs(); if (_e) { _o->subgraphs.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->subgraphs[_i] = std::unique_ptr<tflite::SubGraphT>(_e->Get(_i)->UnPack(_resolver)); } } }
   { auto _e = description(); if (_e) _o->description = _e->str(); }
   { auto _e = buffers(); if (_e) { _o->buffers.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->buffers[_i] = std::unique_ptr<tflite::BufferT>(_e->Get(_i)->UnPack(_resolver)); } } }

@@ -34,7 +34,7 @@ limitations under the License.
 
 namespace tflite {
 
-MicroInterpreter::MicroInterpreter(const Model* model,
+MicroInterpreter::MicroInterpreter( Model* model,
                                    const MicroOpResolver& op_resolver,
                                    uint8_t* tensor_arena,
                                    size_t tensor_arena_size,
@@ -56,7 +56,7 @@ MicroInterpreter::MicroInterpreter(const Model* model,
   Init(profiler);
 }
 
-MicroInterpreter::MicroInterpreter(const Model* model,
+MicroInterpreter::MicroInterpreter(Model* model,
                                    const MicroOpResolver& op_resolver,
                                    MicroAllocator* allocator,
                                    ErrorReporter* error_reporter,

@@ -7,8 +7,7 @@ from tensorflow.keras.layers import Conv2D, Dense, Flatten
 
 NUM_CLASSES = 10
 
-def convert_model(model: tfk.Sequential):
-    path = 'model'
+def convert_model(model: tfk.Sequential, path):
     model.save(path)
     generic_converter = tf.lite.TFLiteConverter.from_saved_model(path)
     generic_converter.target_spec.supported_ops = [
@@ -21,7 +20,7 @@ def convert_model(model: tfk.Sequential):
         f.write(generic_tflite_m)
 
 
-def train_simple_model():
+def train_simple_model(x_train, x_train_norm, x_test_norm, y_train, y_test_categorical):
     val_split = 0.2
     batch_size = 100
     epochs = 15
@@ -67,15 +66,15 @@ def generate_image_cpp_files(x, y, num_images=10):
     cpp_f.write(cpp_file)
     header_f.write(header_file)
 
+def main():
+    (x_train, y_train), (x_test, y_test) = tfk.datasets.fashion_mnist.load_data()
+    x_train = x_train.reshape(x_train.shape[0], 28, 28, 1)
+    x_test = x_test.reshape(x_test.shape[0], 28, 28, 1)
+    x_train_norm = x_train / 255.0
+    x_test_norm = x_test / 255.0
+    y_train = tfk.utils.to_categorical(y_train, NUM_CLASSES)
+    y_test_categorical = tfk.utils.to_categorical(y_test, NUM_CLASSES)
 
-(x_train, y_train), (x_test, y_test) = tfk.datasets.fashion_mnist.load_data()
-x_train = x_train.reshape(x_train.shape[0], 28, 28, 1)
-x_test = x_test.reshape(x_test.shape[0], 28, 28, 1)
-x_train_norm = x_train / 255.0
-x_test_norm = x_test / 255.0
-y_train = tfk.utils.to_categorical(y_train, NUM_CLASSES)
-y_test_categorical = tfk.utils.to_categorical(y_test, NUM_CLASSES)
-
-simple_model = train_simple_model()
-convert_model(simple_model)
-#generate_image_cpp_files(x_test, y_test)
+    simple_model = train_simple_model(x_train, x_train_norm, x_test_norm, y_train, y_test_categorical)
+    convert_model(simple_model, 'model')
+    #generate_image_cpp_files(x_test, y_test)

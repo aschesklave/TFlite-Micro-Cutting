@@ -26,10 +26,12 @@ limitations under the License.
 #include "tensorflow/lite/micro/system_setup.h"
 #include "tensorflow/lite/schema/schema_generated.h"
 
+#include "tensorflow/lite/micro/test_helpers.h"
+
 // Globals, used for compatibility with Arduino-style sketches.
 namespace {
 tflite::ErrorReporter* error_reporter = nullptr;
-const tflite::Model* model = nullptr;
+tflite::Model* model = nullptr;
 tflite::MicroInterpreter* interpreter = nullptr;
 TfLiteTensor* input = nullptr;
 TfLiteTensor* output = nullptr;
@@ -40,7 +42,7 @@ uint8_t tensor_arena[kTensorArenaSize];
 }  // namespace
 
 // The name of this function is important for Arduino compatibility.
-void setup() {
+__attribute__((optimize(0))) void setup() {
   tflite::InitializeTarget();
 
   // Set up logging. Google style is to avoid globals or statics because of
@@ -51,7 +53,11 @@ void setup() {
 
   // Map the model into a usable data structure. This doesn't involve any
   // copying or parsing, it's a very lightweight operation.
-  model = tflite::GetModel(g_model);
+  {
+    const tflite::Model* tmp_model = tflite::GetModel(simple_model_8_tflite);
+    model = const_cast<tflite::Model*>(tmp_model);
+  }
+
   if (model->version() != TFLITE_SCHEMA_VERSION) {
     TF_LITE_REPORT_ERROR(error_reporter,
                          "Model provided is schema version %d not equal "
@@ -69,6 +75,33 @@ void setup() {
       model, resolver, tensor_arena, kTensorArenaSize, error_reporter);
   interpreter = &static_interpreter;
 
+  
+  auto unpacked_model = model->UnPack();
+  auto& subgraphs = unpacked_model->subgraphs;
+  auto& tensors = subgraphs[0]->tensors;
+  
+  for(auto& t : tensors)
+  {
+    auto& shape = t->shape;
+    for(auto& s : shape)
+      if(s == 16) s = 8;
+  }
+  
+  static char inst_memory[sizeof(flatbuffers::FlatBufferBuilder)];
+  flatbuffers::FlatBufferBuilder* fbb =
+      new (inst_memory) flatbuffers::FlatBufferBuilder(
+          8192,
+          &tflite::testing::StackAllocator::instance(16));
+          
+  auto model_offset = tflite::Model::Pack(*fbb, unpacked_model);
+
+  tflite::FinishModelBuffer(*fbb, model_offset);
+  void* model_pointer = fbb->GetBufferPointer();
+  const tflite::Model* tmp_model = flatbuffers::GetRoot<tflite::Model>(model_pointer);
+  tflite::Model* new_model = const_cast<tflite::Model*>(tmp_model);
+  interpreter->SetModel(new_model);
+  
+
   // Allocate memory from the tensor_arena for the model's tensors.
   TfLiteStatus allocate_status = interpreter->AllocateTensors();
   if (allocate_status != kTfLiteOk) {
@@ -85,7 +118,7 @@ void setup() {
 }
 
 // The name of this function is important for Arduino compatibility.
-void loop() {
+__attribute__((optimize(0))) void loop() {
   // Calculate an x value to feed into the model. We compare the current
   // inference_count to the number of inferences per cycle to determine
   // our position within the range of possible x values the model was

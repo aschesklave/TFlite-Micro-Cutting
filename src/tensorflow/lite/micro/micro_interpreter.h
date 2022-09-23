@@ -47,7 +47,7 @@ class MicroInterpreter {
   // variables through a top-level function. The interpreter doesn't do any
   // deallocation of any of the pointed-to objects, ownership remains with the
   // caller.
-  MicroInterpreter(const Model* model, const MicroOpResolver& op_resolver,
+  MicroInterpreter(Model* model, const MicroOpResolver& op_resolver,
                    uint8_t* tensor_arena, size_t tensor_arena_size,
                    ErrorReporter* error_reporter,
                    MicroResourceVariables* resource_variables = nullptr,
@@ -58,7 +58,7 @@ class MicroInterpreter {
   // have allocation handled in more than one interpreter or for recording
   // allocations inside the interpreter. The lifetime of the allocator must be
   // as long as that of the interpreter object.
-  MicroInterpreter(const Model* model, const MicroOpResolver& op_resolver,
+  MicroInterpreter(Model* model, const MicroOpResolver& op_resolver,
                    MicroAllocator* allocator, ErrorReporter* error_reporter,
                    MicroResourceVariables* resource_variables = nullptr,
                    MicroProfiler* profiler = nullptr);
@@ -135,6 +135,9 @@ class MicroInterpreter {
   // arena_used_bytes() + 16.
   size_t arena_used_bytes() const { return allocator_.used_bytes(); }
 
+  void SetModel(Model* new_model) { model_ = new_model; }
+  Model* GetModel() { return model_; }
+
  protected:
   const MicroAllocator& allocator() const { return allocator_; }
   const TfLiteContext& context() const { return context_; }
@@ -147,7 +150,9 @@ class MicroInterpreter {
   // Gets the current subgraph index used from within context methods.
   int get_subgraph_index() { return graph_.GetCurrentSubgraphIndex(); }
 
-  const Model* model_;
+  //TODO: We un-const'ed the model to change the shape
+  Model* model_;
+
   const MicroOpResolver& op_resolver_;
   ErrorReporter* error_reporter_;
   TfLiteContext context_ = {};

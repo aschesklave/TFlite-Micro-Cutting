@@ -41,39 +41,6 @@ namespace tflite {
 namespace testing {
 namespace {
 
-class StackAllocator : public flatbuffers::Allocator {
- public:
-  StackAllocator(size_t alignment) : data_size_(0) {
-    data_ = AlignPointerUp(data_backing_, alignment);
-  }
-
-  uint8_t* allocate(size_t size) override {
-    TFLITE_DCHECK((data_size_ + size) <= kStackAllocatorSize);
-    uint8_t* result = data_;
-    data_ += size;
-    data_size_ += size;
-    return result;
-  }
-
-  void deallocate(uint8_t* p, size_t) override {}
-
-  static StackAllocator& instance(size_t alignment = 1) {
-    // Avoid using true dynamic memory allocation to be portable to bare metal.
-    static char inst_memory[sizeof(StackAllocator)];
-    static StackAllocator* inst = new (inst_memory) StackAllocator(alignment);
-    return *inst;
-  }
-
-  static constexpr size_t kStackAllocatorSize = 8192;
-
- private:
-  uint8_t data_backing_[kStackAllocatorSize];
-  uint8_t* data_;
-  int data_size_;
-
-  TF_LITE_REMOVE_VIRTUAL_DELETE
-};
-
 flatbuffers::FlatBufferBuilder* BuilderInstance() {
   static char inst_memory[sizeof(flatbuffers::FlatBufferBuilder)];
   static flatbuffers::FlatBufferBuilder* inst =
