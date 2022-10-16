@@ -54,7 +54,7 @@ __attribute__((optimize(0))) void setup() {
   // Map the model into a usable data structure. This doesn't involve any
   // copying or parsing, it's a very lightweight operation.
   {
-    const tflite::Model* tmp_model = tflite::GetModel(simple_model_8_tflite);
+    const tflite::Model* tmp_model = tflite::GetModel(custom_model_float_tflite);
     model = const_cast<tflite::Model*>(tmp_model);
   }
 
@@ -79,13 +79,10 @@ __attribute__((optimize(0))) void setup() {
   auto unpacked_model = model->UnPack();
   auto& subgraphs = unpacked_model->subgraphs;
   auto& tensors = subgraphs[0]->tensors;
-  
-  for(auto& t : tensors)
-  {
-    auto& shape = t->shape;
-    for(auto& s : shape)
-      if(s == 16) s = 8;
-  }
+
+  int target_layer = 5;
+  auto& shape = tensors[target_layer]->shape;
+  shape[0] = 8;
   
   static char inst_memory[sizeof(flatbuffers::FlatBufferBuilder)];
   flatbuffers::FlatBufferBuilder* fbb =
@@ -123,14 +120,16 @@ __attribute__((optimize(0))) void loop() {
   // inference_count to the number of inferences per cycle to determine
   // our position within the range of possible x values the model was
   // trained on, and use this to calculate a value.
-  float position = static_cast<float>(inference_count) /
+  //float position = static_cast<float>(inference_count) /
                    static_cast<float>(kInferencesPerCycle);
-  float x = position * kXrange;
+  //float x = position * kXrange;
+  float x = 0.5;
 
   // Quantize the input from floating-point to integer
-  int8_t x_quantized = x / input->params.scale + input->params.zero_point;
+  //int8_t x_quantized = x / input->params.scale + input->params.zero_point;
   // Place the quantized input in the model's input tensor
-  input->data.int8[0] = x_quantized;
+  //input->data.int8[0] = x_quantized;
+  input->data.f[0] = x;
 
   // Run inference, and report any error
   TfLiteStatus invoke_status = interpreter->Invoke();
@@ -141,9 +140,10 @@ __attribute__((optimize(0))) void loop() {
   }
 
   // Obtain the quantized output from model's output tensor
-  int8_t y_quantized = output->data.int8[0];
+  //int8_t y_quantized = output->data.int8[0];
   // Dequantize the output from integer to floating-point
-  float y = (y_quantized - output->params.zero_point) * output->params.scale;
+  //float y = (y_quantized - output->params.zero_point) * output->params.scale;
+  float y = output->data.f[0];
 
   // Output the results. A custom HandleOutput function can be implemented
   // for each supported hardware target.

@@ -1,9 +1,10 @@
+import keras.models
 import tensorflow as tf
 import tensorflow.keras as tfk
 import numpy as np
 import math
 
-from model_generator import convert_model
+from model_generator import convert_model, convert_model_int
 
 from tensorflow.keras.layers import Dense
 
@@ -22,17 +23,46 @@ def generate_dataset():
 
 
 def create_model():
-    m = tfk.Sequential(
-        [
-            Dense(8, activation=None, input_shape=(1,), use_bias=False),
-            Dense(1)
-        ]
-    )
-    m.compile(loss='mse', metrics=['mae'])
-    return m
+    if load:
+        return keras.models.load_model(model_path)
+    else:
+        m = tfk.Sequential(
+            [
+                # Dense(16, activation='relu', input_shape=(2,)),
+                Dense(16, activation='relu', input_shape=(1,)),
+                Dense(16, activation='relu'),
+                Dense(1)
+            ]
+        )
+        m.compile(loss='mse', metrics=['mae'])
+        return m
 
 
+model_path = 'custom_model_float'
+load = True
 simple_model = create_model()
-x_train, x_test, x_validate, y_train, y_test, y_validate = generate_dataset()
-simple_model.fit(x_train, y_train, epochs=500, batch_size=64, validation_data=(x_validate, y_validate))
-convert_model(simple_model, 'simple_model_8')
+if load:
+    x = np.array((0.5,))
+    target_layer = simple_model.layers[1]
+    weights = target_layer.get_weights()
+    inputs = keras.Model(inputs=simple_model.input, outputs=simple_model.layers[0].output).predict(x)
+
+    weights[0][:, 8:] = 0
+    weights[1][8:] = 0
+    simple_model.layers[1].set_weights(weights)
+    res = simple_model.predict(x)
+    inter_res = keras.Model(inputs=simple_model.input, outputs=simple_model.layers[1].output).predict(x)
+    print(res[0])
+else:
+    x_train, x_test, x_validate, y_train, y_test, y_validate = generate_dataset()
+    simple_model.compile(optimizer='adam', loss='mse', metrics=['mae'])
+
+    # For shape (2,)
+    # x_train = np.array([x_train, x_train]).T
+    # y_train = np.array([y_train, y_train]).T
+    # x_validate = np.array([x_validate, x_validate]).T
+    # y_validate = np.array([y_validate, y_validate]).T
+
+    simple_model.fit(x_train, y_train, epochs=500, batch_size=64, validation_data=(x_validate, y_validate))
+    #convert_model_int(simple_model, 'custom_model', x_train)
+    convert_model(simple_model, model_path)

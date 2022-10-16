@@ -7,6 +7,32 @@ from tensorflow.keras.layers import Conv2D, Dense, Flatten
 
 NUM_CLASSES = 10
 
+def convert_model_int(model: tfk.Sequential, path, x_train):
+    model.save(path)
+    converter = tf.lite.TFLiteConverter.from_saved_model(path)
+    model_no_quant_tflite = converter.convert()
+
+    # Save the model to disk
+    open('no_quant_model.tflite', "wb").write(model_no_quant_tflite)
+
+    # Convert the model to the TensorFlow Lite format with quantization
+    def representative_dataset():
+        for i in range(500):
+            yield ([x_train[i].reshape(1, 2)])
+
+    # Set the optimization flag.
+    converter.optimizations = [tf.lite.Optimize.DEFAULT]
+    # Enforce integer only quantization
+    converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+    converter.inference_input_type = tf.int8
+    converter.inference_output_type = tf.int8
+    # Provide a representative dataset to ensure we quantize correctly.
+    converter.representative_dataset = representative_dataset
+    model_tflite = converter.convert()
+
+    # Save the model to disk
+    open(f'{path}.tflite', "wb").write(model_tflite)
+
 def convert_model(model: tfk.Sequential, path):
     model.save(path)
     generic_converter = tf.lite.TFLiteConverter.from_saved_model(path)
