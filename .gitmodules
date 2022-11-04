@@ -1,0 +1,3 @@
+[submodule "lib/tfmicro"]
+	path = lib/tfmicro
+	url = https://github.com/tensorflow/tflite-micro-arduino-examples.git

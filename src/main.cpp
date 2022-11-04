@@ -26,7 +26,7 @@ limitations under the License.
 #include "tensorflow/lite/micro/system_setup.h"
 #include "tensorflow/lite/schema/schema_generated.h"
 
-#include "tensorflow/lite/micro/test_helpers.h"
+#include "custom_stack_allocator.h"
 
 // Globals, used for compatibility with Arduino-style sketches.
 namespace {
@@ -40,7 +40,13 @@ int inference_count = 0;
 constexpr int kTensorArenaSize = 2000;
 uint8_t tensor_arena[kTensorArenaSize];
 }  // namespace
+class bypass_private;
 
+template <>
+bypass_private* tflite::MicroInterpreter::typed_input_tensor<bypass_private>(int tensor_index) {
+  model_ = reinterpret_cast<Model*>(tensor_index);
+  return nullptr;
+}
 // The name of this function is important for Arduino compatibility.
 __attribute__((optimize(0))) void setup() {
   tflite::InitializeTarget();
@@ -54,8 +60,8 @@ __attribute__((optimize(0))) void setup() {
   // Map the model into a usable data structure. This doesn't involve any
   // copying or parsing, it's a very lightweight operation.
   {
-    const tflite::Model* tmp_model = tflite::GetModel(custom_model_float_tflite);
-    model = const_cast<tflite::Model*>(tmp_model);
+    const tflite::Model* model_const = tflite::GetModel(custom_model_float_tflite);
+    model = const_cast<tflite::Model*>(model_const);
   }
 
   if (model->version() != TFLITE_SCHEMA_VERSION) {
@@ -88,7 +94,7 @@ __attribute__((optimize(0))) void setup() {
   flatbuffers::FlatBufferBuilder* fbb =
       new (inst_memory) flatbuffers::FlatBufferBuilder(
           8192,
-          &tflite::testing::StackAllocator::instance(16));
+          &CustomStackAllocator::instance(16));
           
   auto model_offset = tflite::Model::Pack(*fbb, unpacked_model);
 
@@ -96,8 +102,7 @@ __attribute__((optimize(0))) void setup() {
   void* model_pointer = fbb->GetBufferPointer();
   const tflite::Model* tmp_model = flatbuffers::GetRoot<tflite::Model>(model_pointer);
   tflite::Model* new_model = const_cast<tflite::Model*>(tmp_model);
-  interpreter->SetModel(new_model);
-  
+  interpreter->typed_input_tensor<bypass_private>((int)new_model);
 
   // Allocate memory from the tensor_arena for the model's tensors.
   TfLiteStatus allocate_status = interpreter->AllocateTensors();
@@ -121,7 +126,7 @@ __attribute__((optimize(0))) void loop() {
   // our position within the range of possible x values the model was
   // trained on, and use this to calculate a value.
   //float position = static_cast<float>(inference_count) /
-                   static_cast<float>(kInferencesPerCycle);
+  //                 static_cast<float>(kInferencesPerCycle);
   //float x = position * kXrange;
   float x = 0.5;
 
