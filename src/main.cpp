@@ -14,6 +14,7 @@ limitations under the License.
 ==============================================================================*/
 
 #include <TensorFlowLite.h>
+#include <Arduino.h>
 
 #include "main_functions.h"
 
@@ -28,7 +29,19 @@ limitations under the License.
 
 #include "custom_stack_allocator.h"
 
-// Globals, used for compatibility with Arduino-style sketches.
+uint32_t measure_time(tflite::MicroInterpreter* interpreter, int runs)
+{
+  TfLiteTensor* input = nullptr;
+  float x = 0.5;
+  input->data.f[0] = x;
+  uint32_t start_time = micros();
+  for(int i = 0; i < runs; ++i)
+  {
+    TfLiteStatus invoke_status = interpreter->Invoke();
+  }
+  return micros() - start_time;
+}
+
 namespace {
 tflite::ErrorReporter* error_reporter = nullptr;
 tflite::Model* model = nullptr;
@@ -47,18 +60,13 @@ bypass_private* tflite::MicroInterpreter::typed_input_tensor<bypass_private>(int
   model_ = reinterpret_cast<Model*>(tensor_index);
   return nullptr;
 }
-// The name of this function is important for Arduino compatibility.
+
 __attribute__((optimize(0))) void setup() {
   tflite::InitializeTarget();
 
-  // Set up logging. Google style is to avoid globals or statics because of
-  // lifetime uncertainty, but since this has a trivial destructor it's okay.
-  // NOLINTNEXTLINE(runtime-global-variables)
   static tflite::MicroErrorReporter micro_error_reporter;
   error_reporter = &micro_error_reporter;
 
-  // Map the model into a usable data structure. This doesn't involve any
-  // copying or parsing, it's a very lightweight operation.
   {
     const tflite::Model* model_const = tflite::GetModel(custom_model_float_tflite);
     model = const_cast<tflite::Model*>(model_const);
@@ -72,15 +80,13 @@ __attribute__((optimize(0))) void setup() {
     return;
   }
 
-  // This pulls in all the operation implementations we need.
-  // NOLINTNEXTLINE(runtime-global-variables)
   static tflite::AllOpsResolver resolver;
 
-  // Build an interpreter to run the model with.
   static tflite::MicroInterpreter static_interpreter(
       model, resolver, tensor_arena, kTensorArenaSize, error_reporter);
   interpreter = &static_interpreter;
 
+  uint32_t duration = measure_time(interpreter, 100);
   
   auto unpacked_model = model->UnPack();
   auto& subgraphs = unpacked_model->subgraphs;
@@ -104,39 +110,30 @@ __attribute__((optimize(0))) void setup() {
   tflite::Model* new_model = const_cast<tflite::Model*>(tmp_model);
   interpreter->typed_input_tensor<bypass_private>((int)new_model);
 
-  // Allocate memory from the tensor_arena for the model's tensors.
+  uint32_t modified_duration = measure_time(interpreter, 100);
+
   TfLiteStatus allocate_status = interpreter->AllocateTensors();
   if (allocate_status != kTfLiteOk) {
     TF_LITE_REPORT_ERROR(error_reporter, "AllocateTensors() failed");
     return;
   }
 
-  // Obtain pointers to the model's input and output tensors.
   input = interpreter->input(0);
   output = interpreter->output(0);
 
-  // Keep track of how many inferences we have performed.
   inference_count = 0;
 }
 
-// The name of this function is important for Arduino compatibility.
 __attribute__((optimize(0))) void loop() {
-  // Calculate an x value to feed into the model. We compare the current
-  // inference_count to the number of inferences per cycle to determine
-  // our position within the range of possible x values the model was
-  // trained on, and use this to calculate a value.
   //float position = static_cast<float>(inference_count) /
   //                 static_cast<float>(kInferencesPerCycle);
   //float x = position * kXrange;
   float x = 0.5;
 
-  // Quantize the input from floating-point to integer
   //int8_t x_quantized = x / input->params.scale + input->params.zero_point;
-  // Place the quantized input in the model's input tensor
   //input->data.int8[0] = x_quantized;
   input->data.f[0] = x;
 
-  // Run inference, and report any error
   TfLiteStatus invoke_status = interpreter->Invoke();
   if (invoke_status != kTfLiteOk) {
     TF_LITE_REPORT_ERROR(error_reporter, "Invoke failed on x: %f\n",
@@ -144,18 +141,12 @@ __attribute__((optimize(0))) void loop() {
     return;
   }
 
-  // Obtain the quantized output from model's output tensor
   //int8_t y_quantized = output->data.int8[0];
-  // Dequantize the output from integer to floating-point
   //float y = (y_quantized - output->params.zero_point) * output->params.scale;
   float y = output->data.f[0];
 
-  // Output the results. A custom HandleOutput function can be implemented
-  // for each supported hardware target.
   HandleOutput(error_reporter, x, y);
 
-  // Increment the inference_counter, and reset it if we have reached
-  // the total number per cycle
   inference_count += 1;
   if (inference_count >= kInferencesPerCycle) inference_count = 0;
 }
