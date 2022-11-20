@@ -27,17 +27,12 @@ limitations under the License.
 #include "tensorflow/lite/micro/system_setup.h"
 #include "tensorflow/lite/schema/schema_generated.h"
 
-#include "custom_stack_allocator.h"
+#include "model_modifier.h"
 
-class bypass_private;
+uint32_t TARGET_LAYER = 1;
+uint32_t TARGET_SHAPE = 8;
 
-template <>
-bypass_private* tflite::MicroInterpreter::typed_input_tensor<bypass_private>(int tensor_index) {
-  model_ = reinterpret_cast<Model*>(tensor_index);
-  return nullptr;
-}
-
-uint32_t measure_time(tflite::MicroInterpreter* interpreter, int runs)
+static uint32_t measureTime(tflite::MicroInterpreter* interpreter, int runs)
 {
   TfLiteTensor* input = nullptr;
   float x = 0.5;
@@ -50,37 +45,13 @@ uint32_t measure_time(tflite::MicroInterpreter* interpreter, int runs)
   return micros() - start_time;
 }
 
-void modify_model(tflite::MicroInterpreter* interpreter, tflite::Model* unmodified_model)
-{
-  auto unpacked_model = unmodified_model->UnPack();
-  auto& subgraphs = unpacked_model->subgraphs;
-  auto& tensors = subgraphs[0]->tensors;
-
-  int target_layer = 5;
-  auto& shape = tensors[target_layer]->shape;
-  shape[0] = 8;
-
-  static char inst_memory[sizeof(flatbuffers::FlatBufferBuilder)];
-  flatbuffers::FlatBufferBuilder* fbb =
-      new (inst_memory) flatbuffers::FlatBufferBuilder(
-          8192,
-          &CustomStackAllocator::instance(16));
-
-  auto model_offset = tflite::Model::Pack(*fbb, unpacked_model);
-
-  tflite::FinishModelBuffer(*fbb, model_offset);
-  void* model_pointer = fbb->GetBufferPointer();
-  const tflite::Model* tmp_model = flatbuffers::GetRoot<tflite::Model>(model_pointer);
-  tflite::Model* new_model = const_cast<tflite::Model*>(tmp_model);
-  interpreter->typed_input_tensor<bypass_private>((int)new_model);
-}
-
 namespace {
 tflite::ErrorReporter* error_reporter = nullptr;
 tflite::Model* model = nullptr;
 tflite::MicroInterpreter* interpreter = nullptr;
 TfLiteTensor* input = nullptr;
 TfLiteTensor* output = nullptr;
+ModelModifier *modifier = nullptr;
 int inference_count = 0;
 
 constexpr int kTensorArenaSize = 2000;
@@ -94,7 +65,7 @@ __attribute__((optimize(0))) void setup() {
   error_reporter = &micro_error_reporter;
 
   {
-    const tflite::Model* model_const = tflite::GetModel(reds_model);
+    const tflite::Model* model_const = tflite::GetModel(custom_model_float_tflite);
     model = const_cast<tflite::Model*>(model_const);
   }
 
@@ -112,17 +83,18 @@ __attribute__((optimize(0))) void setup() {
       model, resolver, tensor_arena, kTensorArenaSize, error_reporter);
   interpreter = &static_interpreter;
 
-  uint32_t duration = measure_time(interpreter, 100);
-
-  modify_model(interpreter, model);
-
-  uint32_t modified_duration = measure_time(interpreter, 100);
-
   TfLiteStatus allocate_status = interpreter->AllocateTensors();
   if (allocate_status != kTfLiteOk) {
     TF_LITE_REPORT_ERROR(error_reporter, "AllocateTensors() failed");
     return;
   }
+
+  //uint32_t duration = measureTime(interpreter, 100);
+
+  modifier = new ModelModifier(interpreter, model, error_reporter);
+  modifier->modifyShape(TARGET_LAYER, TARGET_SHAPE);
+
+  uint32_t modified_duration = measureTime(interpreter, 100);
 
   input = interpreter->input(0);
   output = interpreter->output(0);
