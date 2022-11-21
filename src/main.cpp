@@ -29,6 +29,8 @@ limitations under the License.
 
 #include "custom_stack_allocator.h"
 
+const float* images[10];
+
 class bypass_private;
 
 template <>
@@ -37,15 +39,50 @@ bypass_private* tflite::MicroInterpreter::typed_input_tensor<bypass_private>(int
   return nullptr;
 }
 
-uint32_t measure_time(tflite::MicroInterpreter* interpreter, int runs)
+void initializeImages() {
+  images[0] = x_test_0class;
+  images[1] = x_test_1class;
+  images[2] = x_test_2class;
+  images[3] = x_test_3class;
+  images[4] = x_test_4class;
+  images[5] = x_test_5class;
+  images[6] = x_test_6class;
+  images[7] = x_test_7class;
+  images[8] = x_test_8class;
+  images[9] = x_test_9class;
+}
+
+uint32_t measure_time(tflite::MicroInterpreter* interpreter, int runs, tflite::ErrorReporter* error_reporter)
 {
   TfLiteTensor* input = nullptr;
-  float x = 0.5;
-  input->data.f[0] = x;
+  TfLiteTensor* output = nullptr;
+  input = interpreter->input(0);
+  output = interpreter->output(0);
+
   uint32_t start_time = micros();
   for(int i = 0; i < runs; ++i)
   {
+    int img_no = i % 10;
+    const float* curr_img = images[img_no];
+    float* image_data = input->data.f;
+    for(unsigned int i = 0; i < 32 * 32; ++i)
+    {
+      *image_data++ = curr_img[i];
+    }
+
     TfLiteStatus invoke_status = interpreter->Invoke();
+    float max_percentage = -1;
+    unsigned int prediction = 666;
+    for(int class_idx = 0; class_idx < 10; ++class_idx)
+    {
+      TF_LITE_REPORT_ERROR(error_reporter, "Class %d: %f", class_idx, output->data.f[class_idx]);
+      if(output->data.f[class_idx] > max_percentage)
+      {
+        max_percentage = output->data.f[class_idx];
+        prediction = class_idx;
+      }
+    }
+    TF_LITE_REPORT_ERROR(error_reporter, "Max prob: %f; Prediction: class %d; Correct: %d", max_percentage, prediction, i);
   }
   return micros() - start_time;
 }
@@ -83,12 +120,14 @@ TfLiteTensor* input = nullptr;
 TfLiteTensor* output = nullptr;
 int inference_count = 0;
 
-constexpr int kTensorArenaSize = 2000;
+constexpr int kTensorArenaSize = 150000;
 uint8_t tensor_arena[kTensorArenaSize];
 }  // namespace
 
 __attribute__((optimize(0))) void setup() {
   tflite::InitializeTarget();
+
+  initializeImages();
 
   static tflite::MicroErrorReporter micro_error_reporter;
   error_reporter = &micro_error_reporter;
@@ -112,11 +151,14 @@ __attribute__((optimize(0))) void setup() {
       model, resolver, tensor_arena, kTensorArenaSize, error_reporter);
   interpreter = &static_interpreter;
 
-  uint32_t duration = measure_time(interpreter, 100);
+  input = interpreter->input(0);
+  output = interpreter->output(0);
 
-  modify_model(interpreter, model);
+  uint32_t duration = measure_time(interpreter, 100, error_reporter);
 
-  uint32_t modified_duration = measure_time(interpreter, 100);
+  //modify_model(interpreter, model);
+
+  //uint32_t modified_duration = measure_time(interpreter, 100, error_reporter);
 
   TfLiteStatus allocate_status = interpreter->AllocateTensors();
   if (allocate_status != kTfLiteOk) {
@@ -134,6 +176,7 @@ __attribute__((optimize(0))) void loop() {
   //float position = static_cast<float>(inference_count) /
   //                 static_cast<float>(kInferencesPerCycle);
   //float x = position * kXrange;
+  /*
   float x = 0.5;
 
   //int8_t x_quantized = x / input->params.scale + input->params.zero_point;
@@ -152,7 +195,8 @@ __attribute__((optimize(0))) void loop() {
   float y = output->data.f[0];
 
   HandleOutput(error_reporter, x, y);
-
+  */
+  uint32_t duration = measure_time(interpreter, 100, error_reporter);
   inference_count += 1;
   if (inference_count >= kInferencesPerCycle) inference_count = 0;
 }
