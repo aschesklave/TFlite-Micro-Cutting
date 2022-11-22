@@ -82,7 +82,7 @@ uint32_t measure_time(tflite::MicroInterpreter* interpreter, int runs, tflite::E
         prediction = class_idx;
       }
     }
-    TF_LITE_REPORT_ERROR(error_reporter, "Max prob: %f; Prediction: class %d; Correct: %d", max_percentage, prediction, i);
+    TF_LITE_REPORT_ERROR(error_reporter, "Max prob: %f; Prediction: class %d; Correct: %d", max_percentage, prediction, img_no);
   }
   return micros() - start_time;
 }
@@ -154,7 +154,26 @@ __attribute__((optimize(0))) void setup() {
   input = interpreter->input(0);
   output = interpreter->output(0);
 
-  uint32_t duration = measure_time(interpreter, 100, error_reporter);
+  // uint32_t duration = measure_time(interpreter, 100, error_reporter);
+
+  for (int t = 5; t >= 4; --t) {
+    delay(1000);
+    TF_LITE_REPORT_ERROR(error_reporter, "%d", t);
+  }
+
+  auto unpacked_model = model->UnPack();
+  TF_LITE_REPORT_ERROR(error_reporter, "3");
+  auto& subgraphs = unpacked_model->subgraphs;
+  TF_LITE_REPORT_ERROR(error_reporter, "2");
+  auto& tensors = subgraphs[0]->tensors;
+  TF_LITE_REPORT_ERROR(error_reporter, "1");
+
+  for (auto it = tensors.begin(); it != tensors.end(); ++it) {
+    TF_LITE_REPORT_ERROR(error_reporter, "Index: %d; Name: %s", std::distance(tensors.begin(), it), (*it)->name);
+    for (const auto& s : (*it)->shape) {
+      TF_LITE_REPORT_ERROR(error_reporter, ":%d", s);
+    }
+  }
 
   //modify_model(interpreter, model);
 
@@ -172,31 +191,4 @@ __attribute__((optimize(0))) void setup() {
   inference_count = 0;
 }
 
-__attribute__((optimize(0))) void loop() {
-  //float position = static_cast<float>(inference_count) /
-  //                 static_cast<float>(kInferencesPerCycle);
-  //float x = position * kXrange;
-  /*
-  float x = 0.5;
-
-  //int8_t x_quantized = x / input->params.scale + input->params.zero_point;
-  //input->data.int8[0] = x_quantized;
-  input->data.f[0] = x;
-
-  TfLiteStatus invoke_status = interpreter->Invoke();
-  if (invoke_status != kTfLiteOk) {
-    TF_LITE_REPORT_ERROR(error_reporter, "Invoke failed on x: %f\n",
-                         static_cast<double>(x));
-    return;
-  }
-
-  //int8_t y_quantized = output->data.int8[0];
-  //float y = (y_quantized - output->params.zero_point) * output->params.scale;
-  float y = output->data.f[0];
-
-  HandleOutput(error_reporter, x, y);
-  */
-  uint32_t duration = measure_time(interpreter, 100, error_reporter);
-  inference_count += 1;
-  if (inference_count >= kInferencesPerCycle) inference_count = 0;
-}
+__attribute__((optimize(0))) void loop() {}
