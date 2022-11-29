@@ -29,6 +29,17 @@ limitations under the License.
 
 #include "custom_stack_allocator.h"
 
+namespace {
+tflite::ErrorReporter* error_reporter = nullptr;
+tflite::Model* model = nullptr;
+tflite::MicroInterpreter* interpreter = nullptr;
+TfLiteTensor* input = nullptr;
+TfLiteTensor* output = nullptr;
+
+constexpr int kTensorArenaSize = 100000;
+uint8_t tensor_arena[kTensorArenaSize];
+}  // namespace
+
 const float* images[10];
 
 class bypass_private;
@@ -54,11 +65,6 @@ void initializeImages() {
 
 uint32_t measure_time(tflite::MicroInterpreter* interpreter, int runs, tflite::ErrorReporter* error_reporter)
 {
-  TfLiteTensor* input = nullptr;
-  TfLiteTensor* output = nullptr;
-  input = interpreter->input(0);
-  output = interpreter->output(0);
-
   uint32_t start_time = micros();
   for(int i = 0; i < runs; ++i)
   {
@@ -117,18 +123,6 @@ __attribute__((optimize(0))) void modify_model(tflite::MicroInterpreter* interpr
   delete fbb;
 }
 
-namespace {
-tflite::ErrorReporter* error_reporter = nullptr;
-tflite::Model* model = nullptr;
-tflite::MicroInterpreter* interpreter = nullptr;
-TfLiteTensor* input = nullptr;
-TfLiteTensor* output = nullptr;
-int inference_count = 0;
-
-constexpr int kTensorArenaSize = 100000;
-uint8_t tensor_arena[kTensorArenaSize];
-}  // namespace
-
 __attribute__((optimize(0))) void setup() {
   tflite::InitializeTarget();
 
@@ -156,6 +150,12 @@ __attribute__((optimize(0))) void setup() {
       model, resolver, tensor_arena, kTensorArenaSize, error_reporter);
   interpreter = &static_interpreter;
 
+  TfLiteStatus allocate_status = interpreter->AllocateTensors();
+  if (allocate_status != kTfLiteOk) {
+    TF_LITE_REPORT_ERROR(error_reporter, "AllocateTensors() failed");
+    return;
+  }
+
   input = interpreter->input(0);
   output = interpreter->output(0);
 
@@ -175,17 +175,6 @@ __attribute__((optimize(0))) void setup() {
   }
 
   uint32_t modified_duration = measure_time(interpreter, 10, error_reporter);
-
-  TfLiteStatus allocate_status = interpreter->AllocateTensors();
-  if (allocate_status != kTfLiteOk) {
-    TF_LITE_REPORT_ERROR(error_reporter, "AllocateTensors() failed");
-    return;
-  }
-
-  input = interpreter->input(0);
-  output = interpreter->output(0);
-
-  inference_count = 0;
 }
 
 __attribute__((optimize(0))) void loop() {}
