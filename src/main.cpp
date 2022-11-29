@@ -87,7 +87,7 @@ uint32_t measure_time(tflite::MicroInterpreter* interpreter, int runs, tflite::E
   return micros() - start_time;
 }
 
-void modify_model(tflite::MicroInterpreter* interpreter, tflite::Model* unmodified_model)
+__attribute__((optimize(0))) void modify_model(tflite::MicroInterpreter* interpreter, tflite::Model* unmodified_model)
 {
   auto unpacked_model = unmodified_model->UnPack();
   auto& subgraphs = unpacked_model->subgraphs;
