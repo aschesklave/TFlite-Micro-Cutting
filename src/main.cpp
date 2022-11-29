@@ -71,6 +71,10 @@ uint32_t measure_time(tflite::MicroInterpreter* interpreter, int runs, tflite::E
     }
 
     TfLiteStatus invoke_status = interpreter->Invoke();
+    if (invoke_status != kTfLiteOk) {
+      TF_LITE_REPORT_ERROR(error_reporter, "Invoke failed!");
+      return 0;
+    }
     float max_percentage = -1;
     unsigned int prediction = 666;
     for(int class_idx = 0; class_idx < 10; ++class_idx)
@@ -93,9 +97,9 @@ __attribute__((optimize(0))) void modify_model(tflite::MicroInterpreter* interpr
   auto& subgraphs = unpacked_model->subgraphs;
   auto& tensors = subgraphs[0]->tensors;
 
-  int target_layer = 5;
+  int target_layer = 2;
   auto& shape = tensors[target_layer]->shape;
-  shape[0] = 8;
+  shape[0] = 12;
 
   static char inst_memory[sizeof(flatbuffers::FlatBufferBuilder)];
   flatbuffers::FlatBufferBuilder* fbb =
@@ -110,6 +114,7 @@ __attribute__((optimize(0))) void modify_model(tflite::MicroInterpreter* interpr
   const tflite::Model* tmp_model = flatbuffers::GetRoot<tflite::Model>(model_pointer);
   tflite::Model* new_model = const_cast<tflite::Model*>(tmp_model);
   interpreter->typed_input_tensor<bypass_private>((int)new_model);
+  delete fbb;
 }
 
 namespace {
@@ -120,7 +125,7 @@ TfLiteTensor* input = nullptr;
 TfLiteTensor* output = nullptr;
 int inference_count = 0;
 
-constexpr int kTensorArenaSize = 150000;
+constexpr int kTensorArenaSize = 100000;
 uint8_t tensor_arena[kTensorArenaSize];
 }  // namespace
 
@@ -154,19 +159,13 @@ __attribute__((optimize(0))) void setup() {
   input = interpreter->input(0);
   output = interpreter->output(0);
 
-  // uint32_t duration = measure_time(interpreter, 100, error_reporter);
+  uint32_t duration = measure_time(interpreter, 10, error_reporter);
 
-  for (int t = 5; t >= 4; --t) {
-    delay(1000);
-    TF_LITE_REPORT_ERROR(error_reporter, "%d", t);
-  }
+  modify_model(interpreter, model);
 
   auto unpacked_model = model->UnPack();
-  TF_LITE_REPORT_ERROR(error_reporter, "3");
   auto& subgraphs = unpacked_model->subgraphs;
-  TF_LITE_REPORT_ERROR(error_reporter, "2");
   auto& tensors = subgraphs[0]->tensors;
-  TF_LITE_REPORT_ERROR(error_reporter, "1");
 
   for (auto it = tensors.begin(); it != tensors.end(); ++it) {
     TF_LITE_REPORT_ERROR(error_reporter, "Index: %d; Name: %s", std::distance(tensors.begin(), it), (*it)->name);
@@ -175,9 +174,7 @@ __attribute__((optimize(0))) void setup() {
     }
   }
 
-  //modify_model(interpreter, model);
-
-  //uint32_t modified_duration = measure_time(interpreter, 100, error_reporter);
+  uint32_t modified_duration = measure_time(interpreter, 10, error_reporter);
 
   TfLiteStatus allocate_status = interpreter->AllocateTensors();
   if (allocate_status != kTfLiteOk) {
