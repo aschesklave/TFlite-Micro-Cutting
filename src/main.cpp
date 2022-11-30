@@ -110,7 +110,7 @@ __attribute__((optimize(0))) void modify_model(tflite::MicroInterpreter* interpr
   static char inst_memory[sizeof(flatbuffers::FlatBufferBuilder)];
   flatbuffers::FlatBufferBuilder* fbb =
       new (inst_memory) flatbuffers::FlatBufferBuilder(
-          8192,
+          16000,
           &CustomStackAllocator::instance(16));
 
   TF_LITE_REPORT_ERROR(error_reporter, "before pack");
@@ -163,20 +163,9 @@ __attribute__((optimize(0))) void setup() {
   input = interpreter->input(0);
   output = interpreter->output(0);
 
-  uint32_t duration = measure_time(interpreter, 10, error_reporter);
+  //uint32_t duration = measure_time(interpreter, 10, error_reporter);
 
   modify_model(interpreter, model);
-
-  auto unpacked_model = model->UnPack();
-  auto& subgraphs = unpacked_model->subgraphs;
-  auto& tensors = subgraphs[0]->tensors;
-
-  for (auto it = tensors.begin(); it != tensors.end(); ++it) {
-    TF_LITE_REPORT_ERROR(error_reporter, "Index: %d; Name: %s", std::distance(tensors.begin(), it), (*it)->name);
-    for (const auto& s : (*it)->shape) {
-      TF_LITE_REPORT_ERROR(error_reporter, ":%d", s);
-    }
-  }
 
   uint32_t modified_duration = measure_time(interpreter, 10, error_reporter);
 }
