@@ -113,11 +113,7 @@ __attribute__((optimize(0))) void modify_model(tflite::MicroInterpreter* interpr
           16000,
           &CustomStackAllocator::instance(16));
 
-  TF_LITE_REPORT_ERROR(error_reporter, "before pack");
-
   auto model_offset = tflite::Model::Pack(*fbb, unpacked_model);
-
-  TF_LITE_REPORT_ERROR(error_reporter, "after pack");
 
   tflite::FinishModelBuffer(*fbb, model_offset);
   void* model_pointer = fbb->GetBufferPointer();
@@ -136,7 +132,7 @@ __attribute__((optimize(0))) void setup() {
   error_reporter = &micro_error_reporter;
 
   {
-    const tflite::Model* model_const = tflite::GetModel(reds_model);
+    const tflite::Model* model_const = tflite::GetModel(custom_reds_tflite);
     model = const_cast<tflite::Model*>(model_const);
   }
 
