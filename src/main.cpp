@@ -113,10 +113,12 @@ __attribute__((optimize(0))) void modify_model(tflite::MicroInterpreter* interpr
           16000,
           &CustomStackAllocator::instance(16));
 
+  Serial1.println("before pack");
   TF_LITE_REPORT_ERROR(error_reporter, "before pack");
 
   auto model_offset = tflite::Model::Pack(*fbb, unpacked_model);
 
+  Serial1.println("after pack");
   TF_LITE_REPORT_ERROR(error_reporter, "after pack");
 
   tflite::FinishModelBuffer(*fbb, model_offset);
@@ -128,6 +130,9 @@ __attribute__((optimize(0))) void modify_model(tflite::MicroInterpreter* interpr
 }
 
 __attribute__((optimize(0))) void setup() {
+  Serial1.begin(115200);
+  while (!Serial1);
+  Serial1.println("Starting...");
   tflite::InitializeTarget();
 
   initializeImages();
