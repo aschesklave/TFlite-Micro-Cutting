@@ -86,6 +86,7 @@ uint32_t measure_time(tflite::MicroInterpreter* interpreter, int runs, tflite::E
     for(int class_idx = 0; class_idx < 10; ++class_idx)
     {
       TF_LITE_REPORT_ERROR(error_reporter, "Class %d: %f", class_idx, output->data.f[class_idx]);
+      Serial1.print("Class "); Serial1.print(class_idx); Serial1.print(": "); Serial1.println(output->data.f[class_idx]);
       if(output->data.f[class_idx] > max_percentage)
       {
         max_percentage = output->data.f[class_idx];
@@ -93,6 +94,8 @@ uint32_t measure_time(tflite::MicroInterpreter* interpreter, int runs, tflite::E
       }
     }
     TF_LITE_REPORT_ERROR(error_reporter, "Max prob: %f; Prediction: class %d; Correct: %d", max_percentage, prediction, img_no);
+    Serial1.print("Max prob: "); Serial1.print(max_percentage); Serial1.print("; Prediction: class ");
+    Serial1.print(prediction); Serial1.print("; Correct: "); Serial1.println(img_no);
   }
   return micros() - start_time;
 }
@@ -103,14 +106,14 @@ __attribute__((optimize(0))) void modify_model(tflite::MicroInterpreter* interpr
   auto& subgraphs = unpacked_model->subgraphs;
   auto& tensors = subgraphs[0]->tensors;
 
-  int target_layer = 2;
+  int target_layer = 3;
   auto& shape = tensors[target_layer]->shape;
   shape[0] = 12;
 
   static char inst_memory[sizeof(flatbuffers::FlatBufferBuilder)];
   flatbuffers::FlatBufferBuilder* fbb =
       new (inst_memory) flatbuffers::FlatBufferBuilder(
-          16000,
+          90000,
           &CustomStackAllocator::instance(16));
 
   Serial1.println("before pack");
@@ -168,11 +171,17 @@ __attribute__((optimize(0))) void setup() {
   input = interpreter->input(0);
   output = interpreter->output(0);
 
-  //uint32_t duration = measure_time(interpreter, 10, error_reporter);
+  uint32_t duration = measure_time(interpreter, 10, error_reporter);
 
   modify_model(interpreter, model);
 
   uint32_t modified_duration = measure_time(interpreter, 10, error_reporter);
+
+  Serial1.print("Duration unmodified: ");
+  Serial1.println(duration);
+
+  Serial1.print("Duration modified: ");
+  Serial1.println(modified_duration);
 }
 
 __attribute__((optimize(0))) void loop() {}
