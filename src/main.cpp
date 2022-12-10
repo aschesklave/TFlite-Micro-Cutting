@@ -94,7 +94,7 @@ __attribute__((optimize(0))) void setup() {
   error_reporter = &micro_error_reporter;
 
   {
-    const tflite::Model* model_const = tflite::GetModel(reds_model);
+    const tflite::Model* model_const = tflite::GetModel(custom_model_float_tflite);
     model = const_cast<tflite::Model*>(model_const);
   }
 
