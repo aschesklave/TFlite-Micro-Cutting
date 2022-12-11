@@ -25,16 +25,16 @@ limitations under the License.
 #ifndef TENSORFLOW_LITE_MICRO_EXAMPLES_HELLO_WORLD_MODEL_H_
 #define TENSORFLOW_LITE_MICRO_EXAMPLES_HELLO_WORLD_MODEL_H_
 
-extern const unsigned char custom_model_tflite[];
-extern const unsigned int custom_model_tflite_len;
+extern unsigned char custom_model_tflite[];
+extern unsigned int custom_model_tflite_len;
 
-extern const unsigned char custom_model_float_tflite[];
-extern const unsigned int custom_model_float_tflite_len;
+extern unsigned char custom_model_float_tflite[];
+extern unsigned int custom_model_float_tflite_len;
 
-extern const unsigned char standard_model_tflite[];
-extern const int standard_model_tflite_len;
+extern unsigned char standard_model_tflite[];
+extern int standard_model_tflite_len;
 
-extern const unsigned char reds_model[];
-extern const int reds_model_len;
+extern unsigned char reds_model[];
+extern int reds_model_len;
 
 #endif  // TENSORFLOW_LITE_MICRO_EXAMPLES_HELLO_WORLD_MODEL_H_

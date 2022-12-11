@@ -16,18 +16,15 @@ class ModelModifier
     uint8_t findOpCodeIndex(const tflite::BuiltinOperator op, uint32_t &index);
 
     uint32_t op_index_fully_connected_;
-    tflite::MicroInterpreter* interpreter_;
-    tflite::ModelT* unpacked_model_;
-    tflite::SubGraphT* subgraph_;
-    std::vector<std::unique_ptr<tflite::OperatorCodeT>>* opcodes_;
+    tflite::Model* model_;
     tflite::ErrorReporter* error_reporter_;
 
   public:
-    void modifyShape(const int32_t layer_index, const int32_t new_shape);
+    void modifyFullyConnectedShape(const int32_t layer_index, const int32_t new_shape);
     int32_t getWeightTensorIndex(const int32_t& target_op_index);
-    uint8_t setTensorShape(const int32_t tensor_index, const int32_t new_shape);
+    uint8_t setTensorShape(const int32_t tensor_index, const int32_t new_shape, const int32_t shape_index = 0);
 
-    ModelModifier(tflite::MicroInterpreter* interpreter, tflite::Model* unmodified_model, tflite::ErrorReporter* error_reporter);
+    ModelModifier(tflite::Model* model, tflite::ErrorReporter* error_reporter);
     ~ModelModifier();
 };
 

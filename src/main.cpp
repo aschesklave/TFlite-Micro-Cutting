@@ -32,19 +32,6 @@ limitations under the License.
 uint32_t TARGET_LAYER = 1;
 uint32_t TARGET_SHAPE = 8;
 
-static uint32_t measureTime(tflite::MicroInterpreter* interpreter, int runs)
-{
-  TfLiteTensor* input = nullptr;
-  float x = 0.5;
-  input->data.f[0] = x;
-  uint32_t start_time = micros();
-  for(int i = 0; i < runs; ++i)
-  {
-    TfLiteStatus invoke_status = interpreter->Invoke();
-  }
-  return micros() - start_time;
-}
-
 namespace {
 tflite::ErrorReporter* error_reporter = nullptr;
 tflite::Model* model = nullptr;
@@ -58,7 +45,22 @@ constexpr int kTensorArenaSize = 2000;
 uint8_t tensor_arena[kTensorArenaSize];
 }  // namespace
 
+static uint32_t measureTime(tflite::MicroInterpreter* interpreter, int runs)
+{
+  float x = 0.5;
+  input->data.f[0] = x;
+  uint32_t start_time = micros();
+  for(int i = 0; i < runs; ++i)
+  {
+    TfLiteStatus invoke_status = interpreter->Invoke();
+  }
+  return micros() - start_time;
+}
+
 __attribute__((optimize(0))) void setup() {
+  Serial1.begin(115200);
+  while (!Serial1);
+  Serial1.println("Starting...");
   tflite::InitializeTarget();
 
   static tflite::MicroErrorReporter micro_error_reporter;
@@ -77,6 +79,9 @@ __attribute__((optimize(0))) void setup() {
     return;
   }
 
+  static ModelModifier static_modifier(model, error_reporter);
+  modifier = &static_modifier;
+
   static tflite::AllOpsResolver resolver;
 
   static tflite::MicroInterpreter static_interpreter(
@@ -85,46 +90,25 @@ __attribute__((optimize(0))) void setup() {
 
   TfLiteStatus allocate_status = interpreter->AllocateTensors();
   if (allocate_status != kTfLiteOk) {
+    Serial1.println("AllocateTensors() failed");
     TF_LITE_REPORT_ERROR(error_reporter, "AllocateTensors() failed");
     return;
   }
 
-  //uint32_t duration = measureTime(interpreter, 100);
+  input = interpreter->input(0);
+  output = interpreter->output(0);
 
-  modifier = new ModelModifier(interpreter, model, error_reporter);
-  modifier->modifyShape(TARGET_LAYER, TARGET_SHAPE);
+  uint32_t duration = measureTime(interpreter, 100);
+
+  Serial1.print("Duration: "); Serial1.println(duration);
+
+  modifier->modifyFullyConnectedShape(TARGET_LAYER, TARGET_SHAPE);
 
   uint32_t modified_duration = measureTime(interpreter, 100);
 
-  input = interpreter->input(0);
-  output = interpreter->output(0);
+  Serial1.print("Modified duration: "); Serial1.println(modified_duration);
 
   inference_count = 0;
 }
 
-__attribute__((optimize(0))) void loop() {
-  //float position = static_cast<float>(inference_count) /
-  //                 static_cast<float>(kInferencesPerCycle);
-  //float x = position * kXrange;
-  float x = 0.5;
-
-  //int8_t x_quantized = x / input->params.scale + input->params.zero_point;
-  //input->data.int8[0] = x_quantized;
-  input->data.f[0] = x;
-
-  TfLiteStatus invoke_status = interpreter->Invoke();
-  if (invoke_status != kTfLiteOk) {
-    TF_LITE_REPORT_ERROR(error_reporter, "Invoke failed on x: %f\n",
-                         static_cast<double>(x));
-    return;
-  }
-
-  //int8_t y_quantized = output->data.int8[0];
-  //float y = (y_quantized - output->params.zero_point) * output->params.scale;
-  float y = output->data.f[0];
-
-  HandleOutput(error_reporter, x, y);
-
-  inference_count += 1;
-  if (inference_count >= kInferencesPerCycle) inference_count = 0;
-}
+__attribute__((optimize(0))) void loop() { }
