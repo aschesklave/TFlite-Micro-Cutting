@@ -29,30 +29,81 @@ limitations under the License.
 
 #include "model_modifier.h"
 
-uint32_t TARGET_LAYER = 1;
-uint32_t TARGET_SHAPE = 8;
-
 namespace {
 tflite::ErrorReporter* error_reporter = nullptr;
 tflite::Model* model = nullptr;
 tflite::MicroInterpreter* interpreter = nullptr;
 TfLiteTensor* input = nullptr;
 TfLiteTensor* output = nullptr;
-ModelModifier *modifier = nullptr;
-int inference_count = 0;
 
-constexpr int kTensorArenaSize = 2000;
+constexpr int kTensorArenaSize = 100000;
 uint8_t tensor_arena[kTensorArenaSize];
 }  // namespace
 
-static uint32_t measureTime(tflite::MicroInterpreter* interpreter, int runs)
+const float* images[10];
+
+namespace {
+  tflite::ErrorReporter* error_reporter = nullptr;
+  tflite::Model* model = nullptr;
+  tflite::MicroInterpreter* interpreter = nullptr;
+  TfLiteTensor* input = nullptr;
+  TfLiteTensor* output = nullptr;
+  ModelModifier *modifier = nullptr;
+  constexpr int kTensorArenaSize = 100000;
+  uint8_t tensor_arena[kTensorArenaSize];
+  uint32_t TARGET_LAYER = 1;
+  uint32_t TARGET_SHAPE = 12;
+}  // namespace
+
+const float* images[10];
+
+
+void initializeImages() {
+  images[0] = x_test_0class;
+  images[1] = x_test_1class;
+  images[2] = x_test_2class;
+  images[3] = x_test_3class;
+  images[4] = x_test_4class;
+  images[5] = x_test_5class;
+  images[6] = x_test_6class;
+  images[7] = x_test_7class;
+  images[8] = x_test_8class;
+  images[9] = x_test_9class;
+}
+
+uint32_t measure_time(tflite::MicroInterpreter* interpreter, int runs, tflite::ErrorReporter* error_reporter)
 {
-  float x = 0.5;
-  input->data.f[0] = x;
   uint32_t start_time = micros();
   for(int i = 0; i < runs; ++i)
   {
+    int img_no = i % 10;
+    const float* curr_img = images[img_no];
+    float* image_data = input->data.f;
+    for(unsigned int i = 0; i < 32 * 32; ++i)
+    {
+      *image_data++ = curr_img[i];
+    }
+
     TfLiteStatus invoke_status = interpreter->Invoke();
+    if (invoke_status != kTfLiteOk) {
+      TF_LITE_REPORT_ERROR(error_reporter, "Invoke failed!");
+      return 0;
+    }
+    float max_percentage = -1;
+    unsigned int prediction = 666;
+    for(int class_idx = 0; class_idx < 10; ++class_idx)
+    {
+      TF_LITE_REPORT_ERROR(error_reporter, "Class %d: %f", class_idx, output->data.f[class_idx]);
+      Serial1.print("Class "); Serial1.print(class_idx); Serial1.print(": "); Serial1.println(output->data.f[class_idx]);
+      if(output->data.f[class_idx] > max_percentage)
+      {
+        max_percentage = output->data.f[class_idx];
+        prediction = class_idx;
+      }
+    }
+    TF_LITE_REPORT_ERROR(error_reporter, "Max prob: %f; Prediction: class %d; Correct: %d", max_percentage, prediction, img_no);
+    Serial1.print("Max prob: "); Serial1.print(max_percentage); Serial1.print("; Prediction: class ");
+    Serial1.print(prediction); Serial1.print("; Correct: "); Serial1.println(img_no);
   }
   return micros() - start_time;
 }
@@ -63,11 +114,13 @@ __attribute__((optimize(0))) void setup() {
   Serial1.println("Starting...");
   tflite::InitializeTarget();
 
+  initializeImages();
+
   static tflite::MicroErrorReporter micro_error_reporter;
   error_reporter = &micro_error_reporter;
 
   {
-    const tflite::Model* model_const = tflite::GetModel(custom_model_float_tflite);
+    const tflite::Model* model_const = tflite::GetModel(custom_reds_tflite);
     model = const_cast<tflite::Model*>(model_const);
   }
 
@@ -108,7 +161,7 @@ __attribute__((optimize(0))) void setup() {
 
   Serial1.print("Modified duration: "); Serial1.println(modified_duration);
 
-  inference_count = 0;
+  uint32_t duration = measure_time(interpreter, 10, error_reporter);
 }
 
-__attribute__((optimize(0))) void loop() { }
+void loop() { }
