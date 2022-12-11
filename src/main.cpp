@@ -30,19 +30,6 @@ limitations under the License.
 #include "model_modifier.h"
 
 namespace {
-tflite::ErrorReporter* error_reporter = nullptr;
-tflite::Model* model = nullptr;
-tflite::MicroInterpreter* interpreter = nullptr;
-TfLiteTensor* input = nullptr;
-TfLiteTensor* output = nullptr;
-
-constexpr int kTensorArenaSize = 100000;
-uint8_t tensor_arena[kTensorArenaSize];
-}  // namespace
-
-const float* images[10];
-
-namespace {
   tflite::ErrorReporter* error_reporter = nullptr;
   tflite::Model* model = nullptr;
   tflite::MicroInterpreter* interpreter = nullptr;
@@ -57,7 +44,6 @@ namespace {
 
 const float* images[10];
 
-
 void initializeImages() {
   images[0] = x_test_0class;
   images[1] = x_test_1class;
@@ -71,7 +57,7 @@ void initializeImages() {
   images[9] = x_test_9class;
 }
 
-uint32_t measure_time(tflite::MicroInterpreter* interpreter, int runs, tflite::ErrorReporter* error_reporter)
+uint32_t measureTime(tflite::MicroInterpreter* interpreter, int runs, tflite::ErrorReporter* error_reporter)
 {
   uint32_t start_time = micros();
   for(int i = 0; i < runs; ++i)
@@ -151,17 +137,13 @@ __attribute__((optimize(0))) void setup() {
   input = interpreter->input(0);
   output = interpreter->output(0);
 
-  uint32_t duration = measureTime(interpreter, 100);
-
+  uint32_t duration = measureTime(interpreter, 100, error_reporter);
   Serial1.print("Duration: "); Serial1.println(duration);
 
   modifier->modifyFullyConnectedShape(TARGET_LAYER, TARGET_SHAPE);
 
-  uint32_t modified_duration = measureTime(interpreter, 100);
-
+  uint32_t modified_duration = measureTime(interpreter, 100, error_reporter);
   Serial1.print("Modified duration: "); Serial1.println(modified_duration);
-
-  uint32_t duration = measure_time(interpreter, 10, error_reporter);
 }
 
 void loop() { }
