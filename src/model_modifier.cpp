@@ -27,11 +27,16 @@ uint8_t ModelModifier::findOpCodeIndex(const tflite::BuiltinOperator op, uint32_
 int32_t ModelModifier::getWeightTensorIndex(const int32_t& target_op_index) {
   const tflite::SubGraph* subgraph = (*model_->subgraphs())[0];
   if (target_op_index >= subgraph->operators()->size()) {
-    TF_LITE_REPORT_ERROR(error_reporter_, "ERROR: target_op_index out of bounds.");
-    Serial1.println("ERROR: target_op_index out of bounds.");
-    return 1;
+    TF_LITE_REPORT_ERROR(error_reporter_, "ERROR: layer index out of bounds.");
+    Serial1.println("ERROR: layer index out of bounds.");
+    return -1;
   }
   const tflite::Operator* target_op = (*subgraph->operators())[target_op_index];
+  if (subgraph->operators()->size() < 3) {
+    TF_LITE_REPORT_ERROR(error_reporter_, "ERROR: selected layer needs 3 inputs but has %d", subgraph->operators()->size());
+    Serial1.println("ERROR: selected layer needs 3 inputs but has "); Serial1.println(subgraph->operators()->size());
+    return -1;
+  }
   return (*target_op->inputs())[1];
 }
 
@@ -72,8 +77,14 @@ void ModelModifier::modifyFullyConnectedShape(const int32_t layer_index, const i
   const tflite::Operator* target_op = (*subgraph->operators())[layer_index];
   if(target_op->opcode_index() != op_index_fully_connected_) {
     TF_LITE_REPORT_ERROR(error_reporter_, "ERROR: Layer to modify is not Fully-Connected.");
+    Serial1.println("ERROR: Layer to modify is not Fully-Connected.");
     return;
   }
   int32_t target_tensor = getWeightTensorIndex(layer_index);
+  int32_t next_target_tensor = getWeightTensorIndex(layer_index + 1);
+  if(target_tensor == -1 || next_target_tensor == -1) {
+    return;
+  }
   int8_t ret = setTensorShape(target_tensor, new_shape);
+  ret = setTensorShape(next_target_tensor, new_shape, 1);
 }

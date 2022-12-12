@@ -38,8 +38,8 @@ namespace {
   ModelModifier *modifier = nullptr;
   constexpr int kTensorArenaSize = 100000;
   uint8_t tensor_arena[kTensorArenaSize];
-  uint32_t TARGET_LAYER = 1;
-  uint32_t TARGET_SHAPE = 12;
+  uint32_t TARGET_LAYER = 0;
+  uint32_t TARGET_SHAPE = 10;
 }  // namespace
 
 const float* images[10];
