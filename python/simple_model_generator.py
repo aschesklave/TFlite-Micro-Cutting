@@ -3,6 +3,7 @@ import tensorflow as tf
 import tensorflow.keras as tfk
 import numpy as np
 import math
+import tensorflow_datasets as tfds
 
 from model_generator import convert_model, convert_model_int
 
@@ -73,6 +74,52 @@ def flatten_image(x):
     return padded.flatten().reshape(32*32).astype('float32') / 255
 
 
+def flatten_image_reds(x, y):
+    x = x / 255
+    x = (x - 0.1307) / 0.3081  # subtract mean and divide by standard deviation
+    padded = tf.pad(tensor=x, paddings=tf.constant([[0, 0], [2, 2], [2, 2], [0, 0]]))
+    return tf.cast(x=tf.reshape(tensor=padded, shape=[-1, 1024]), dtype=tf.float32), y
+
+
+def get_datapoints(ds):
+    data = tfds.as_numpy(ds.take(1))
+    for d in data:
+        return d[0], d[1]
+
+
+def generate_reds_image_cpp_files(num_images=10):
+    train_data, val_data, test_data = tfds.load("mnist",
+                                                split=['train[10000:]', 'train[0:10000]', 'test'],
+                                                batch_size=num_images, as_supervised=True)
+
+    val_data = val_data.map(flatten_image_reds)
+
+    file_name = 'images'
+    file_path = 'C:\\Users\\Julian\\Documents\\PlatformIO\\Projects\\alto4arduino\\'
+    img_size = 32
+    cpp_file = f'#include "{file_name}.h"\n\nconst unsigned int size = {img_size};\n\n'
+    header_file = f'#pragma once\n\nextern const unsigned int size;\n\n'
+    x, y = get_datapoints(val_data)
+
+    for img_no in range(num_images):
+        header_file += f'extern const unsigned int y_{img_no};\n'
+        header_file += f'extern const float img_{img_no}[{img_size * img_size}];\n\n'
+
+        cpp_file += f'const unsigned int y_{img_no} = {y[img_no]};\n'
+        cpp_file += f'const float img_{img_no}[{img_size * img_size}] = {{\n'
+        for i in range(img_size * img_size):
+            cpp_file += f'{x[img_no][i]}, '.rjust(25)
+            if (i+1) % 5 == 0:
+                cpp_file += '\n'
+
+        cpp_file = cpp_file[:-3] + '};\n\n'
+
+    cpp_f = open(f'{file_path}src\\{file_name}.cpp', 'w')
+    header_f = open(f'{file_path}include\\{file_name}.h', 'w')
+    cpp_f.write(cpp_file)
+    header_f.write(header_file)
+
+
 def build_reds_model():
     image_size = 32*32
     (x_train, y_train), (x_test, y_test) = keras.datasets.mnist.load_data()
@@ -92,4 +139,5 @@ def build_reds_model():
     convert_model(m, 'custom_reds')
 
 
-build_reds_model()
+#build_reds_model()
+generate_reds_image_cpp_files()
