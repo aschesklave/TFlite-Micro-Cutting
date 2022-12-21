@@ -16,21 +16,17 @@ limitations under the License.
 #include <TensorFlowLite.h>
 #include <Arduino.h>
 
-#include "main_functions.h"
-
-#include "tensorflow/lite/micro/all_ops_resolver.h"
-#include "constants.h"
+#include "images.h"
 #include "model.h"
-#include "output_handler.h"
-#include "tensorflow/lite/micro/micro_error_reporter.h"
+#include "tensorflow/lite/micro/all_ops_resolver.h"
 #include "tensorflow/lite/micro/micro_interpreter.h"
 #include "tensorflow/lite/micro/system_setup.h"
+#include "tensorflow/lite/micro/micro_log.h"
 #include "tensorflow/lite/schema/schema_generated.h"
 
 #include "model_modifier.h"
 
 namespace {
-  tflite::ErrorReporter* error_reporter = nullptr;
   tflite::Model* model = nullptr;
   tflite::MicroInterpreter* interpreter = nullptr;
   TfLiteTensor* input = nullptr;
@@ -39,25 +35,39 @@ namespace {
   constexpr int kTensorArenaSize = 100000;
   uint8_t tensor_arena[kTensorArenaSize];
   uint32_t TARGET_LAYER = 0;
-  uint32_t TARGET_SHAPE = 10;
+  uint32_t TARGET_SHAPE = 17;
 }  // namespace
 
 const float* images[10];
+int labels[10];
 
 void initializeImages() {
-  images[0] = x_test_0class;
-  images[1] = x_test_1class;
-  images[2] = x_test_2class;
-  images[3] = x_test_3class;
-  images[4] = x_test_4class;
-  images[5] = x_test_5class;
-  images[6] = x_test_6class;
-  images[7] = x_test_7class;
-  images[8] = x_test_8class;
-  images[9] = x_test_9class;
+  images[0] = img_0;
+  images[1] = img_1;
+  images[2] = img_2;
+  images[3] = img_3;
+  images[4] = img_4;
+  images[5] = img_5;
+  images[6] = img_6;
+  images[7] = img_7;
+  images[8] = img_8;
+  images[9] = img_9;
 }
 
-uint32_t measureTime(tflite::MicroInterpreter* interpreter, int runs, tflite::ErrorReporter* error_reporter)
+void initializeLabels() {
+  labels[0] = y_0;
+  labels[1] = y_1;
+  labels[2] = y_2;
+  labels[3] = y_3;
+  labels[4] = y_4;
+  labels[5] = y_5;
+  labels[6] = y_6;
+  labels[7] = y_7;
+  labels[8] = y_8;
+  labels[9] = y_9;
+}
+
+uint32_t measureTime(tflite::MicroInterpreter* interpreter, int runs)
 {
   uint32_t start_time = micros();
   for(int i = 0; i < runs; ++i)
@@ -72,24 +82,24 @@ uint32_t measureTime(tflite::MicroInterpreter* interpreter, int runs, tflite::Er
 
     TfLiteStatus invoke_status = interpreter->Invoke();
     if (invoke_status != kTfLiteOk) {
-      TF_LITE_REPORT_ERROR(error_reporter, "Invoke failed!");
+      MicroPrintf("Invoke failed!");
       return 0;
     }
     float max_percentage = -1;
     unsigned int prediction = 666;
     for(int class_idx = 0; class_idx < 10; ++class_idx)
     {
-      TF_LITE_REPORT_ERROR(error_reporter, "Class %d: %f", class_idx, output->data.f[class_idx]);
-      Serial1.print("Class "); Serial1.print(class_idx); Serial1.print(": "); Serial1.println(output->data.f[class_idx]);
+      // MicroPrintf("Class %d: %f", class_idx, output->data.f[class_idx]);
+      // Serial1.print("Class "); Serial1.print(class_idx); Serial1.print(": "); Serial1.println(output->data.f[class_idx]);
       if(output->data.f[class_idx] > max_percentage)
       {
         max_percentage = output->data.f[class_idx];
         prediction = class_idx;
       }
     }
-    TF_LITE_REPORT_ERROR(error_reporter, "Max prob: %f; Prediction: class %d; Correct: %d", max_percentage, prediction, img_no);
-    Serial1.print("Max prob: "); Serial1.print(max_percentage); Serial1.print("; Prediction: class ");
-    Serial1.print(prediction); Serial1.print("; Correct: "); Serial1.println(img_no);
+    MicroPrintf("Max prob: %f; Prediction: class %d; Correct: %d", max_percentage, prediction, labels[img_no]);
+    // Serial1.print("Max prob: "); Serial1.print(max_percentage); Serial1.print("; Prediction: class ");
+    // Serial1.print(prediction); Serial1.print("; Correct: "); Serial1.println(labels[img_no]);
   }
   return micros() - start_time;
 }
@@ -101,9 +111,7 @@ __attribute__((optimize(0))) void setup() {
   tflite::InitializeTarget();
 
   initializeImages();
-
-  static tflite::MicroErrorReporter micro_error_reporter;
-  error_reporter = &micro_error_reporter;
+  initializeLabels();
 
   {
     const tflite::Model* model_const = tflite::GetModel(custom_reds_tflite);
@@ -111,38 +119,37 @@ __attribute__((optimize(0))) void setup() {
   }
 
   if (model->version() != TFLITE_SCHEMA_VERSION) {
-    TF_LITE_REPORT_ERROR(error_reporter,
-                         "Model provided is schema version %d not equal "
-                         "to supported version %d.",
-                         model->version(), TFLITE_SCHEMA_VERSION);
+    MicroPrintf(
+        "Model provided is schema version %d not equal "
+        "to supported version %d.",
+        model->version(), TFLITE_SCHEMA_VERSION);
     return;
   }
 
-  static ModelModifier static_modifier(model, error_reporter);
+  static ModelModifier static_modifier(model);
   modifier = &static_modifier;
 
   static tflite::AllOpsResolver resolver;
 
-  static tflite::MicroInterpreter static_interpreter(
-      model, resolver, tensor_arena, kTensorArenaSize, error_reporter);
+  static tflite::MicroInterpreter static_interpreter(model, resolver, tensor_arena, kTensorArenaSize);
   interpreter = &static_interpreter;
 
   TfLiteStatus allocate_status = interpreter->AllocateTensors();
   if (allocate_status != kTfLiteOk) {
     Serial1.println("AllocateTensors() failed");
-    TF_LITE_REPORT_ERROR(error_reporter, "AllocateTensors() failed");
+    MicroPrintf("AllocateTensors() failed");
     return;
   }
 
   input = interpreter->input(0);
   output = interpreter->output(0);
 
-  uint32_t duration = measureTime(interpreter, 100, error_reporter);
+  uint32_t duration = measureTime(interpreter, 100);
   Serial1.print("Duration: "); Serial1.println(duration);
 
   modifier->modifyFullyConnectedShape(TARGET_LAYER, TARGET_SHAPE);
 
-  uint32_t modified_duration = measureTime(interpreter, 100, error_reporter);
+  uint32_t modified_duration = measureTime(interpreter, 100);
   Serial1.print("Modified duration: "); Serial1.println(modified_duration);
 }
 
