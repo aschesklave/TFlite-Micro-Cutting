@@ -2,6 +2,10 @@
 #include "model_modifier.h"
 #include "tensorflow/lite/micro/micro_log.h"
 #include "third_party/flatbuffers/include/flatbuffers/flatbuffers.h"
+#include "tensorflow/lite/modifier_params.h"
+
+uint32_t weight_offset = 0;
+uint32_t apply_offset = 0;
 
 ModelModifier::ModelModifier(tflite::Model* model)
   : model_(model)
@@ -25,7 +29,7 @@ uint8_t ModelModifier::findOpCodeIndex(const tflite::BuiltinOperator op, uint32_
   return 1;
 }
 
-int32_t ModelModifier::getWeightTensorIndex(const int32_t& target_op_index) {
+int32_t ModelModifier::getWeightTensorIndex(const uint32_t& target_op_index) {
   const tflite::SubGraph* subgraph = (*model_->subgraphs())[0];
   if (target_op_index >= subgraph->operators()->size()) {
     MicroPrintf("ERROR: layer index out of bounds.");
@@ -41,7 +45,7 @@ int32_t ModelModifier::getWeightTensorIndex(const int32_t& target_op_index) {
   return (*target_op->inputs())[1];
 }
 
-uint8_t ModelModifier::setTensorShape(const int32_t tensor_index, const int32_t new_shape, const int32_t shape_index) {
+uint8_t ModelModifier::setTensorShape(const uint32_t tensor_index, const int32_t new_shape, const uint32_t shape_index) {
   const tflite::SubGraph* subgraph = (*model_->subgraphs())[0];
   if (tensor_index >= subgraph->tensors()->size()) {
     MicroPrintf("ERROR: tensor index out of bounds.");
@@ -71,16 +75,9 @@ uint8_t ModelModifier::setTensorShape(const int32_t tensor_index, const int32_t 
   }
 
   if (shape_index == 1) {
-    (void) ModifyTensorData(tensor, old_shape - new_shape);
+    weight_offset += old_shape - new_shape;
   }
   return 0;
-}
-
-void ModelModifier::ModifyTensorData(const tflite::Tensor* tensor, const int32_t diff)
-{
-  auto size = tensor->variant_tensors()->size();
-  Serial1.print("Size: "); Serial1.println(size);
-  tflite::VariantSubType* test = tensor->variant_tensors()->GetMutableObject(0);
 }
 
 void ModelModifier::modifyFullyConnectedShape(const int32_t layer_index, const int32_t new_shape)
@@ -94,7 +91,6 @@ void ModelModifier::modifyFullyConnectedShape(const int32_t layer_index, const i
   }
   int32_t target_tensor = getWeightTensorIndex(layer_index);
   int32_t next_target_tensor = getWeightTensorIndex(layer_index + 1);
-  Serial1.print("Next target tensor: "); Serial1.println(next_target_tensor);
   if(target_tensor < 0 || next_target_tensor < 0) {
     return;
   }

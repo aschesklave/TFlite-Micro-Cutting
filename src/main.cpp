@@ -35,7 +35,7 @@ namespace {
   constexpr int kTensorArenaSize = 100000;
   uint8_t tensor_arena[kTensorArenaSize];
   uint32_t TARGET_LAYER = 0;
-  uint32_t TARGET_SHAPE = 17;
+  uint32_t TARGET_SHAPE = 11;
 }  // namespace
 
 const float* images[10];
@@ -97,7 +97,7 @@ uint32_t measureTime(tflite::MicroInterpreter* interpreter, int runs)
         prediction = class_idx;
       }
     }
-    MicroPrintf("Max prob: %f; Prediction: class %d; Correct: %d", max_percentage, prediction, labels[img_no]);
+    // MicroPrintf("Max prob: %f; Prediction: class %d; Correct: %d", max_percentage, prediction, labels[img_no]);
     // Serial1.print("Max prob: "); Serial1.print(max_percentage); Serial1.print("; Prediction: class ");
     // Serial1.print(prediction); Serial1.print("; Correct: "); Serial1.println(labels[img_no]);
   }

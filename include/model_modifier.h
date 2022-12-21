@@ -17,12 +17,11 @@ class ModelModifier
     uint32_t op_index_fully_connected_;
     tflite::Model* model_;
     tflite::ErrorReporter* error_reporter_;
-    void ModifyTensorData(const tflite::Tensor* tensor, const int32_t diff);
 
   public:
     void modifyFullyConnectedShape(const int32_t layer_index, const int32_t new_shape);
-    int32_t getWeightTensorIndex(const int32_t& target_op_index);
-    uint8_t setTensorShape(const int32_t tensor_index, const int32_t new_shape, const int32_t shape_index = 0);
+    int32_t getWeightTensorIndex(const uint32_t& target_op_index);
+    uint8_t setTensorShape(const uint32_t tensor_index, const int32_t new_shape, const uint32_t shape_index = 0);
 
     ModelModifier(tflite::Model* model);
     ~ModelModifier();
