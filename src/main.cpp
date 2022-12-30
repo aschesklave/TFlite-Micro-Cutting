@@ -57,7 +57,7 @@ namespace {
 //   images[9] = x_test_9class;
 // }
 
-uint32_t measureTime(tflite::MicroInterpreter* interpreter, tflite::ErrorReporter* error_reporter)
+uint32_t measureTime(tflite::MicroInterpreter* interpreter)
 {
   const int num_images = 1797;
   unsigned int num_correct = 0;
@@ -80,7 +80,7 @@ uint32_t measureTime(tflite::MicroInterpreter* interpreter, tflite::ErrorReporte
     int prediction = 666;
     for(int class_idx = 0; class_idx < 10; ++class_idx)
     {
-      //TF_LITE_REPORT_ERROR(error_reporter, "Class %d: %f", class_idx, output->data.f[class_idx]);
+      //MicroPrintf("Class %d: %f", class_idx, output->data.f[class_idx]);
       //Serial1.print("Class "); Serial1.print(class_idx); Serial1.print(": "); Serial1.println(output->data.f[class_idx]);
       if(output->data.f[class_idx] > max_percentage)
       {
@@ -92,7 +92,7 @@ uint32_t measureTime(tflite::MicroInterpreter* interpreter, tflite::ErrorReporte
     if(truth == prediction) {
       num_correct += 1;
     }
-    //TF_LITE_REPORT_ERROR(error_reporter, "Max prob: %f; Prediction: class %d; Correct: %d", max_percentage, prediction, truth);
+    //MicroPrintf("Max prob: %f; Prediction: class %d; Correct: %d", max_percentage, prediction, truth);
     //Serial1.print("Max prob: "); Serial1.print(max_percentage); Serial1.print("; Prediction: class ");
     //Serial1.print(prediction); Serial1.print("; Correct: "); Serial1.println(truth);
   }
@@ -140,12 +140,12 @@ __attribute__((optimize(0))) void setup() {
   input = interpreter->input(0);
   output = interpreter->output(0);
 
-  uint32_t duration = measureTime(interpreter, error_reporter);
+  uint32_t duration = measureTime(interpreter);
   Serial1.print("Duration: "); Serial1.println(duration);
 
   modifier->modifyFullyConnectedShape(TARGET_LAYER, TARGET_SHAPE);
 
-  uint32_t modified_duration = measureTime(interpreter, error_reporter);
+  uint32_t modified_duration = measureTime(interpreter);
   Serial1.print("Modified duration: "); Serial1.println(modified_duration);
 }
 
