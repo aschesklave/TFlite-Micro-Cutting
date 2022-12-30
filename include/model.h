@@ -25,19 +25,27 @@ limitations under the License.
 #ifndef TENSORFLOW_LITE_MICRO_EXAMPLES_HELLO_WORLD_MODEL_H_
 #define TENSORFLOW_LITE_MICRO_EXAMPLES_HELLO_WORLD_MODEL_H_
 
-//extern unsigned char custom_model_tflite[];
-//extern unsigned int custom_model_tflite_len;
 
-extern unsigned char custom_model_float_tflite[];
-extern unsigned int custom_model_float_tflite_len;
+// extern unsigned char reds_model[];
+// extern int reds_model_len;
 
-//extern unsigned char standard_model_tflite[];
-//extern int standard_model_tflite_len;
+extern unsigned char first_model_activations_tflite[];
+extern unsigned int first_model_activations_tflite_len;
 
-extern unsigned char reds_model[];
-extern int reds_model_len;
+// extern unsigned char first_model_NO_activations_tflite[];
+// extern unsigned int first_model_NO_activations_tflite_len;
 
-extern unsigned char custom_reds_tflite[];
-extern unsigned int custom_reds_tflite_len;
+// extern unsigned char second_model_activations_tflite[];
+// extern unsigned int second_model_activations_tflite_len;
+
+// extern unsigned char second_model_NO_activations_tflite[];
+// extern unsigned int second_model_NO_activations_tflite_len;
+
+// extern unsigned char third_model_activations_tflite[];
+// extern unsigned int third_model_activations_tflite_len;
+
+// extern unsigned char third_model_NO_activations_tflite[];
+// extern unsigned int third_model_NO_activations_tflite_len;
+
 
 #endif  // TENSORFLOW_LITE_MICRO_EXAMPLES_HELLO_WORLD_MODEL_H_
