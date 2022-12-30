@@ -16,8 +16,6 @@ limitations under the License.
 #include <TensorFlowLite.h>
 #include <Arduino.h>
 
-#include "main_functions.h"
-
 #include "tensorflow/lite/micro/all_ops_resolver.h"
 //#include "constants.h"
 #include "digits_normalized.h"
@@ -110,9 +108,6 @@ __attribute__((optimize(0))) void setup() {
   tflite::InitializeTarget();
 
   // initializeImages();
-
-  static tflite::MicroErrorReporter micro_error_reporter;
-  error_reporter = &micro_error_reporter;
 
   {
     const tflite::Model* model_const = tflite::GetModel(first_model_activations_tflite);
