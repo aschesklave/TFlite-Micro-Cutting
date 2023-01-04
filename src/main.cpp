@@ -38,8 +38,7 @@ namespace {
   ModelModifier *modifier = nullptr;
   constexpr int kTensorArenaSize = 100000;
   uint8_t tensor_arena[kTensorArenaSize];
-  uint32_t TARGET_LAYER = 0;
-  uint32_t TARGET_SHAPE = 11;
+  uint32_t TARGET_SHAPE = 5;
 }  // namespace
 
 // const float* images[10];
@@ -57,7 +56,7 @@ namespace {
 //   images[9] = x_test_9class;
 // }
 
-uint32_t measureTime(tflite::MicroInterpreter* interpreter)
+float measureTime(tflite::MicroInterpreter* interpreter)
 {
   const int num_images = 1797;
   unsigned int num_correct = 0;
@@ -97,8 +96,8 @@ uint32_t measureTime(tflite::MicroInterpreter* interpreter)
     //Serial1.print(prediction); Serial1.print("; Correct: "); Serial1.println(truth);
   }
   float acc = num_correct / (float)num_images;
-  Serial1.print("Accuracy: ");Serial1.println(acc);
-  return micros() - start_time;
+  Serial1.print("Accuracy: ");Serial1.println(acc * 100);
+  return (micros() - start_time) / (float)num_images;
 }
 
 __attribute__((optimize(0))) void setup() {
@@ -110,7 +109,7 @@ __attribute__((optimize(0))) void setup() {
   // initializeImages();
 
   {
-    const tflite::Model* model_const = tflite::GetModel(first_model_activations_tflite);
+    const tflite::Model* model_const = tflite::GetModel(second_model_activations_tflite);
     model = const_cast<tflite::Model*>(model_const);
   }
 
@@ -140,12 +139,16 @@ __attribute__((optimize(0))) void setup() {
   input = interpreter->input(0);
   output = interpreter->output(0);
 
-  uint32_t duration = measureTime(interpreter);
+  float duration = measureTime(interpreter);
   Serial1.print("Duration: "); Serial1.println(duration);
 
-  modifier->modifyFullyConnectedShape(TARGET_LAYER, TARGET_SHAPE);
+  modifier->modifyFullyConnectedShape(0, TARGET_SHAPE);
+  modifier->modifyFullyConnectedShape(2, TARGET_SHAPE);
+  modifier->modifyFullyConnectedShape(4, TARGET_SHAPE);
+  modifier->modifyFullyConnectedShape(6, TARGET_SHAPE);
+  modifier->modifyFullyConnectedShape(8, TARGET_SHAPE);
 
-  uint32_t modified_duration = measureTime(interpreter);
+  float modified_duration = measureTime(interpreter);
   Serial1.print("Modified duration: "); Serial1.println(modified_duration);
 }
 
