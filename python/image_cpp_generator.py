@@ -1,6 +1,6 @@
 import pandas as pd
-csv_filename = 'digits_normalized.csv'
-cpp_filename = 'digits_normalized.cpp'
+csv_filename = 'data/wine_normalized.csv'
+cpp_filename = 'data/wine_normalized.cpp'
 
 #image_df = pd.read_csv('digits_normalized.csv')
 
