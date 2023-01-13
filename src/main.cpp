@@ -97,6 +97,7 @@ float measureTime(tflite::MicroInterpreter* interpreter)
   }
   float acc = num_correct / (float)num_images;
   Serial1.print("Accuracy: ");Serial1.println(acc * 100);
+  Serial.print("Accuracy: ");Serial.println(acc * 100);
   return (micros() - start_time) / (float)num_images;
 }
 
@@ -141,6 +142,7 @@ __attribute__((optimize(0))) void setup() {
 
   float duration = measureTime(interpreter);
   Serial1.print("Duration: "); Serial1.println(duration);
+  Serial.print("Duration: "); Serial.println(duration);
 
   modifier->modifyFullyConnectedShape(0, TARGET_SHAPE);
   modifier->modifyFullyConnectedShape(2, TARGET_SHAPE);
@@ -150,6 +152,7 @@ __attribute__((optimize(0))) void setup() {
 
   float modified_duration = measureTime(interpreter);
   Serial1.print("Modified duration: "); Serial1.println(modified_duration);
+  Serial.print("Modified duration: "); Serial.println(modified_duration);
 }
 
 void loop() { }
