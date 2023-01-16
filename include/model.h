@@ -29,14 +29,14 @@ limitations under the License.
 // extern unsigned char reds_model[];
 // extern int reds_model_len;
 
-// extern unsigned char first_model_activations_tflite[];
-// extern unsigned int first_model_activations_tflite_len;
+extern unsigned char first_model_activations_tflite[];
+extern unsigned int first_model_activations_tflite_len;
 
 // extern unsigned char first_model_NO_activations_tflite[];
 // extern unsigned int first_model_NO_activations_tflite_len;
 
-extern unsigned char second_model_activations_tflite[];
-extern unsigned int second_model_activations_tflite_len;
+// extern unsigned char second_model_activations_tflite[];
+// extern unsigned int second_model_activations_tflite_len;
 
 // extern unsigned char second_model_NO_activations_tflite[];
 // extern unsigned int second_model_NO_activations_tflite_len;

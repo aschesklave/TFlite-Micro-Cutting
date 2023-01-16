@@ -38,7 +38,6 @@ namespace {
   ModelModifier *modifier = nullptr;
   constexpr int kTensorArenaSize = 100000;
   uint8_t tensor_arena[kTensorArenaSize];
-  uint32_t TARGET_SHAPE = 5;
 }  // namespace
 
 // const float* images[10];
@@ -59,13 +58,16 @@ namespace {
 float measureTime(tflite::MicroInterpreter* interpreter)
 {
   const int num_images = 1797;
+  const int feature_size = 64;
+  const int num_classes = 10;
+
   unsigned int num_correct = 0;
   uint32_t start_time = micros();
   for(int i = 0; i < num_images; ++i)
   {
     const float* curr_img = images[i];
     float* image_data = input->data.f;
-    for(unsigned int i = 0; i < 8 * 8; ++i)
+    for(unsigned int i = 0; i < feature_size; ++i)
     {
       *image_data++ = curr_img[i];
     }
@@ -75,9 +77,10 @@ float measureTime(tflite::MicroInterpreter* interpreter)
       MicroPrintf("Invoke failed!");
       return 0;
     }
+
     float max_percentage = -1;
     int prediction = 666;
-    for(int class_idx = 0; class_idx < 10; ++class_idx)
+    for(int class_idx = 0; class_idx < num_classes; ++class_idx)
     {
       //MicroPrintf("Class %d: %f", class_idx, output->data.f[class_idx]);
       //Serial1.print("Class "); Serial1.print(class_idx); Serial1.print(": "); Serial1.println(output->data.f[class_idx]);
@@ -110,7 +113,7 @@ __attribute__((optimize(0))) void setup() {
   // initializeImages();
 
   {
-    const tflite::Model* model_const = tflite::GetModel(second_model_activations_tflite);
+    const tflite::Model* model_const = tflite::GetModel(first_model_activations_tflite);
     model = const_cast<tflite::Model*>(model_const);
   }
 
@@ -144,11 +147,12 @@ __attribute__((optimize(0))) void setup() {
   Serial1.print("Duration: "); Serial1.println(duration);
   Serial.print("Duration: "); Serial.println(duration);
 
-  modifier->modifyFullyConnectedShape(0, TARGET_SHAPE);
-  modifier->modifyFullyConnectedShape(2, TARGET_SHAPE);
-  modifier->modifyFullyConnectedShape(4, TARGET_SHAPE);
-  modifier->modifyFullyConnectedShape(6, TARGET_SHAPE);
-  modifier->modifyFullyConnectedShape(8, TARGET_SHAPE);
+  uint32_t target_shape = 5;
+  modifier->modifyFullyConnectedShape(0, target_shape);
+  //modifier->modifyFullyConnectedShape(2, target_shape);
+  //modifier->modifyFullyConnectedShape(4, target_shape);
+  //modifier->modifyFullyConnectedShape(6, target_shape);
+  //modifier->modifyFullyConnectedShape(8, target_shape);
 
   float modified_duration = measureTime(interpreter);
   Serial1.print("Modified duration: "); Serial1.println(modified_duration);
