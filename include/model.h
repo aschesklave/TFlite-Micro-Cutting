@@ -25,12 +25,11 @@ limitations under the License.
 #ifndef TENSORFLOW_LITE_MICRO_EXAMPLES_HELLO_WORLD_MODEL_H_
 #define TENSORFLOW_LITE_MICRO_EXAMPLES_HELLO_WORLD_MODEL_H_
 
+extern unsigned char cnn_model[];
+extern int cnn_model_len;
 
-// extern unsigned char reds_model[];
-// extern int reds_model_len;
-
-extern unsigned char first_model_activations_tflite[];
-extern unsigned int first_model_activations_tflite_len;
+//extern unsigned char first_model_activations_tflite[];
+//extern unsigned int first_model_activations_tflite_len;
 
 // extern unsigned char first_model_NO_activations_tflite[];
 // extern unsigned int first_model_NO_activations_tflite_len;

@@ -110,5 +110,12 @@ void ModelModifier::modify2DConvolutionalShape(const int32_t layer_index, const 
   if(findOpCodeIndex(tflite::BuiltinOperator_CONV_2D, op_index_2d_convolutional_)) {
     MicroPrintf("ERROR: No CONV_2D layer found.");
     Serial1.println("ERROR: No CONV_2D layer found.");
+    const tflite::SubGraph* subgraph = (*model_->subgraphs())[0];
+    const tflite::Operator* target_op = (*subgraph->operators())[layer_index];
+    if(target_op->opcode_index() != op_index_fully_connected_) {
+      MicroPrintf("ERROR: Layer to modify is not Conv2D.");
+      Serial1.println("ERROR: Layer to modify is not Conv2D.");
+      return;
+  }
   }
 }
