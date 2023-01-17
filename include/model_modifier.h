@@ -15,11 +15,13 @@ class ModelModifier
     uint8_t findOpCodeIndex(const tflite::BuiltinOperator op, uint32_t &index);
 
     uint32_t op_index_fully_connected_;
+    uint32_t op_index_2d_convolutional_;
     tflite::Model* model_;
     tflite::ErrorReporter* error_reporter_;
 
   public:
     void modifyFullyConnectedShape(const int32_t layer_index, const int32_t new_shape);
+    void modify2DConvolutionalShape(const int32_t layer_index, const int32_t new_shape);
     int32_t getWeightTensorIndex(const uint32_t& target_op_index);
     int32_t setTensorShape(const uint32_t tensor_index, const int32_t new_shape, const uint32_t shape_index = 0);
 

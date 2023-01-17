@@ -81,8 +81,7 @@ int32_t ModelModifier::setTensorShape(const uint32_t tensor_index, const int32_t
   return 0;
 }
 
-void ModelModifier::modifyFullyConnectedShape(const int32_t layer_index, const int32_t new_shape)
-{
+void ModelModifier::modifyFullyConnectedShape(const int32_t layer_index, const int32_t new_shape) {
   if(findOpCodeIndex(tflite::BuiltinOperator_FULLY_CONNECTED, op_index_fully_connected_)) {
     MicroPrintf("ERROR: No FULLY_CONNECTED layer found.");
     Serial1.println("ERROR: No FULLY_CONNECTED layer found.");
@@ -105,4 +104,11 @@ void ModelModifier::modifyFullyConnectedShape(const int32_t layer_index, const i
   res = setTensorShape(next_target_tensor, new_shape, 1);
   if(res < 0) return;
   weight_offset[layer_index + 1] = res;
+}
+
+void ModelModifier::modify2DConvolutionalShape(const int32_t layer_index, const int32_t new_shape) {
+  if(findOpCodeIndex(tflite::BuiltinOperator_CONV_2D, op_index_2d_convolutional_)) {
+    MicroPrintf("ERROR: No CONV_2D layer found.");
+    Serial1.println("ERROR: No CONV_2D layer found.");
+  }
 }
