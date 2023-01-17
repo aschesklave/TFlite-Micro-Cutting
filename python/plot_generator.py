@@ -61,6 +61,5 @@ for d in data_list:
         plt.scatter(i, j, marker=m, color='g')
 
     ax.legend(handles=legend_elements, loc='lower right')
-    plt.show()
     plt.savefig(f'plots/{d["filename"]}.eps', format='eps', bbox_inches='tight')
-    plt.close()
+    plt.show()
