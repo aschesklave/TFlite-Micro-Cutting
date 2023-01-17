@@ -4,19 +4,20 @@
 #include "third_party/flatbuffers/include/flatbuffers/flatbuffers.h"
 #include "tensorflow/lite/modifier_params.h"
 
-uint32_t weight_offset = 0;
-uint32_t apply_offset = 0;
+uint32_t* weight_offset = nullptr;
+uint32_t current_layer_index = 0;
 
 ModelModifier::ModelModifier(tflite::Model* model)
   : model_(model)
 {
-  if(findOpCodeIndex(tflite::BuiltinOperator_FULLY_CONNECTED, op_index_fully_connected_)) {
-    MicroPrintf("ERROR: No FULLY_CONNECTED layer found.");
-    Serial1.println("ERROR: No FULLY_CONNECTED layer found.");
-  }
+  const tflite::SubGraph* subgraph = (*model_->subgraphs())[0];
+  weight_offset = (uint32_t*)calloc(subgraph->operators()->size(), sizeof(uint32_t));
 }
 
-ModelModifier::~ModelModifier() { }
+ModelModifier::~ModelModifier() {
+  free(weight_offset);
+  weight_offset = nullptr;
+}
 
 uint8_t ModelModifier::findOpCodeIndex(const tflite::BuiltinOperator op, uint32_t& index) {
   const auto& opcode_vector = model_->operator_codes();
@@ -45,19 +46,19 @@ int32_t ModelModifier::getWeightTensorIndex(const uint32_t& target_op_index) {
   return (*target_op->inputs())[1];
 }
 
-uint8_t ModelModifier::setTensorShape(const uint32_t tensor_index, const int32_t new_shape, const uint32_t shape_index) {
+int32_t ModelModifier::setTensorShape(const uint32_t tensor_index, const int32_t new_shape, const uint32_t shape_index) {
   const tflite::SubGraph* subgraph = (*model_->subgraphs())[0];
   if (tensor_index >= subgraph->tensors()->size()) {
     MicroPrintf("ERROR: tensor index out of bounds.");
     Serial1.println("ERROR: tensor index out of bounds.");
-    return 1;
+    return -1;
   }
   const tflite::Tensor* tensor = (*subgraph->tensors())[tensor_index];
   const flatbuffers::Vector<int32_t>* shape_vector_const = tensor->shape();
   if (shape_index >= shape_vector_const->size()) {
     MicroPrintf("ERROR: shape index out of bounds.");
     Serial1.println("ERROR: shape index out of bounds.");
-    return 1;
+    return -1;
   }
   const int32_t old_shape = (*shape_vector_const)[shape_index];
   if (new_shape != old_shape) {
@@ -70,18 +71,23 @@ uint8_t ModelModifier::setTensorShape(const uint32_t tensor_index, const int32_t
     if(new_shape != (*shape_vector)[shape_index]) {
       MicroPrintf("ERROR: Shape change failed.");
       Serial1.println("ERROR: Shape change failed.");
-      return 1;
+      return -1;
     }
   }
 
   if (shape_index == 1) {
-    weight_offset += old_shape - new_shape;
+    return old_shape - new_shape;
   }
   return 0;
 }
 
 void ModelModifier::modifyFullyConnectedShape(const int32_t layer_index, const int32_t new_shape)
 {
+  if(findOpCodeIndex(tflite::BuiltinOperator_FULLY_CONNECTED, op_index_fully_connected_)) {
+    MicroPrintf("ERROR: No FULLY_CONNECTED layer found.");
+    Serial1.println("ERROR: No FULLY_CONNECTED layer found.");
+  }
+  //TODO: Check if layer is out of bounds!
   const tflite::SubGraph* subgraph = (*model_->subgraphs())[0];
   const tflite::Operator* target_op = (*subgraph->operators())[layer_index];
   if(target_op->opcode_index() != op_index_fully_connected_) {
@@ -94,6 +100,9 @@ void ModelModifier::modifyFullyConnectedShape(const int32_t layer_index, const i
   if(target_tensor < 0 || next_target_tensor < 0) {
     return;
   }
-  (void) setTensorShape(target_tensor, new_shape);
-  (void) setTensorShape(next_target_tensor, new_shape, 1);
+  int32_t res = setTensorShape(target_tensor, new_shape);
+  if(res < 0) return;
+  res = setTensorShape(next_target_tensor, new_shape, 1);
+  if(res < 0) return;
+  weight_offset[layer_index + 1] = res;
 }

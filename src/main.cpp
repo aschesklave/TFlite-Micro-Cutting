@@ -16,7 +16,9 @@ limitations under the License.
 #include <TensorFlowLite.h>
 #include <Arduino.h>
 
-#include "images.h"
+#include "tensorflow/lite/micro/all_ops_resolver.h"
+//#include "constants.h"
+#include "digits_normalized.h"
 #include "model.h"
 #include "tensorflow/lite/micro/all_ops_resolver.h"
 #include "tensorflow/lite/micro/micro_interpreter.h"
@@ -26,6 +28,8 @@ limitations under the License.
 
 #include "model_modifier.h"
 
+// python -m tensorflow.lite.tools.visualize model.tflite visualized_model.html
+
 namespace {
   tflite::Model* model = nullptr;
   tflite::MicroInterpreter* interpreter = nullptr;
@@ -34,48 +38,36 @@ namespace {
   ModelModifier *modifier = nullptr;
   constexpr int kTensorArenaSize = 100000;
   uint8_t tensor_arena[kTensorArenaSize];
-  uint32_t TARGET_LAYER = 0;
-  uint32_t TARGET_SHAPE = 11;
 }  // namespace
 
-const float* images[10];
-int labels[10];
+// const float* images[10];
 
-void initializeImages() {
-  images[0] = img_0;
-  images[1] = img_1;
-  images[2] = img_2;
-  images[3] = img_3;
-  images[4] = img_4;
-  images[5] = img_5;
-  images[6] = img_6;
-  images[7] = img_7;
-  images[8] = img_8;
-  images[9] = img_9;
-}
+// void initializeImages() {
+//   images[0] = x_test_0class;
+//   images[1] = x_test_1class;
+//   images[2] = x_test_2class;
+//   images[3] = x_test_3class;
+//   images[4] = x_test_4class;
+//   images[5] = x_test_5class;
+//   images[6] = x_test_6class;
+//   images[7] = x_test_7class;
+//   images[8] = x_test_8class;
+//   images[9] = x_test_9class;
+// }
 
-void initializeLabels() {
-  labels[0] = y_0;
-  labels[1] = y_1;
-  labels[2] = y_2;
-  labels[3] = y_3;
-  labels[4] = y_4;
-  labels[5] = y_5;
-  labels[6] = y_6;
-  labels[7] = y_7;
-  labels[8] = y_8;
-  labels[9] = y_9;
-}
-
-uint32_t measureTime(tflite::MicroInterpreter* interpreter, int runs)
+float measureTime(tflite::MicroInterpreter* interpreter)
 {
+  const int num_images = 1797;
+  const int feature_size = 64;
+  const int num_classes = 10;
+
+  unsigned int num_correct = 0;
   uint32_t start_time = micros();
-  for(int i = 0; i < runs; ++i)
+  for(int i = 0; i < num_images; ++i)
   {
-    int img_no = i % 10;
-    const float* curr_img = images[img_no];
+    const float* curr_img = images[i];
     float* image_data = input->data.f;
-    for(unsigned int i = 0; i < 32 * 32; ++i)
+    for(unsigned int i = 0; i < feature_size; ++i)
     {
       *image_data++ = curr_img[i];
     }
@@ -85,23 +77,31 @@ uint32_t measureTime(tflite::MicroInterpreter* interpreter, int runs)
       MicroPrintf("Invoke failed!");
       return 0;
     }
+
     float max_percentage = -1;
-    unsigned int prediction = 666;
-    for(int class_idx = 0; class_idx < 10; ++class_idx)
+    int prediction = 666;
+    for(int class_idx = 0; class_idx < num_classes; ++class_idx)
     {
-      // MicroPrintf("Class %d: %f", class_idx, output->data.f[class_idx]);
-      // Serial1.print("Class "); Serial1.print(class_idx); Serial1.print(": "); Serial1.println(output->data.f[class_idx]);
+      //MicroPrintf("Class %d: %f", class_idx, output->data.f[class_idx]);
+      //Serial1.print("Class "); Serial1.print(class_idx); Serial1.print(": "); Serial1.println(output->data.f[class_idx]);
       if(output->data.f[class_idx] > max_percentage)
       {
         max_percentage = output->data.f[class_idx];
         prediction = class_idx;
       }
     }
-    // MicroPrintf("Max prob: %f; Prediction: class %d; Correct: %d", max_percentage, prediction, labels[img_no]);
-    // Serial1.print("Max prob: "); Serial1.print(max_percentage); Serial1.print("; Prediction: class ");
-    // Serial1.print(prediction); Serial1.print("; Correct: "); Serial1.println(labels[img_no]);
+    int truth = labels[i];
+    if(truth == prediction) {
+      num_correct += 1;
+    }
+    //MicroPrintf("Max prob: %f; Prediction: class %d; Correct: %d", max_percentage, prediction, truth);
+    //Serial1.print("Max prob: "); Serial1.print(max_percentage); Serial1.print("; Prediction: class ");
+    //Serial1.print(prediction); Serial1.print("; Correct: "); Serial1.println(truth);
   }
-  return micros() - start_time;
+  float acc = num_correct / (float)num_images;
+  Serial1.print("Accuracy: ");Serial1.println(acc * 100);
+  Serial.print("Accuracy: ");Serial.println(acc * 100);
+  return (micros() - start_time) / (float)num_images;
 }
 
 __attribute__((optimize(0))) void setup() {
@@ -110,11 +110,10 @@ __attribute__((optimize(0))) void setup() {
   Serial1.println("Starting...");
   tflite::InitializeTarget();
 
-  initializeImages();
-  initializeLabels();
+  // initializeImages();
 
   {
-    const tflite::Model* model_const = tflite::GetModel(custom_reds_tflite);
+    const tflite::Model* model_const = tflite::GetModel(first_model_activations_tflite);
     model = const_cast<tflite::Model*>(model_const);
   }
 
@@ -144,13 +143,20 @@ __attribute__((optimize(0))) void setup() {
   input = interpreter->input(0);
   output = interpreter->output(0);
 
-  uint32_t duration = measureTime(interpreter, 100);
+  float duration = measureTime(interpreter);
   Serial1.print("Duration: "); Serial1.println(duration);
+  Serial.print("Duration: "); Serial.println(duration);
 
-  modifier->modifyFullyConnectedShape(TARGET_LAYER, TARGET_SHAPE);
+  uint32_t target_shape = 5;
+  modifier->modifyFullyConnectedShape(0, target_shape);
+  //modifier->modifyFullyConnectedShape(2, target_shape);
+  //modifier->modifyFullyConnectedShape(4, target_shape);
+  //modifier->modifyFullyConnectedShape(6, target_shape);
+  //modifier->modifyFullyConnectedShape(8, target_shape);
 
-  uint32_t modified_duration = measureTime(interpreter, 100);
+  float modified_duration = measureTime(interpreter);
   Serial1.print("Modified duration: "); Serial1.println(modified_duration);
+  Serial.print("Modified duration: "); Serial.println(modified_duration);
 }
 
 void loop() { }
