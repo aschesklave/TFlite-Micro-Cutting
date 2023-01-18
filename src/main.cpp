@@ -136,7 +136,7 @@ void setup() {
   tflite::InitializeTarget();
 
   {
-    const tflite::Model* model_const = tflite::GetModel(cnn_model);
+    const tflite::Model* model_const = tflite::GetModel(cnn_tflite);
     model = const_cast<tflite::Model*>(model_const);
   }
 
@@ -170,7 +170,7 @@ void setup() {
   Serial1.print("Duration: "); Serial1.println(duration);
   Serial.print("Duration: "); Serial.println(duration);
 
-  uint32_t target_shape = 5;
+  //uint32_t target_shape = 5;
 
   // float modified_duration = measureTime(interpreter, 1);
   // Serial1.print("Modified duration: "); Serial1.println(modified_duration);

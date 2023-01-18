@@ -116,6 +116,8 @@ void ModelModifier::modify2DConvolutionalShape(const int32_t layer_index, const 
       MicroPrintf("ERROR: Layer to modify is not Conv2D.");
       Serial1.println("ERROR: Layer to modify is not Conv2D.");
       return;
-  }
+    }
+
+    
   }
 }
