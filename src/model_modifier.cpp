@@ -30,6 +30,28 @@ uint8_t ModelModifier::findOpCodeIndex(const tflite::BuiltinOperator op, uint32_
   return 1;
 }
 
+int32_t ModelModifier::getInputTensorIndex(const uint32_t& target_op_index) {
+  const tflite::SubGraph* subgraph = (*model_->subgraphs())[0];
+  if (target_op_index >= subgraph->operators()->size()) {
+    MicroPrintf("ERROR: layer index out of bounds.");
+    Serial1.println("ERROR: layer index out of bounds.");
+    return -1;
+  }
+  const tflite::Operator* target_op = (*subgraph->operators())[target_op_index];
+  return (*target_op->inputs())[0];
+}
+
+int32_t ModelModifier::getOutputTensorIndex(const uint32_t& target_op_index) {
+  const tflite::SubGraph* subgraph = (*model_->subgraphs())[0];
+  if (target_op_index >= subgraph->operators()->size()) {
+    MicroPrintf("ERROR: layer index out of bounds.");
+    Serial1.println("ERROR: layer index out of bounds.");
+    return -1;
+  }
+  const tflite::Operator* target_op = (*subgraph->operators())[target_op_index];
+  return (*target_op->outputs())[0];
+}
+
 int32_t ModelModifier::getWeightTensorIndex(const uint32_t& target_op_index) {
   const tflite::SubGraph* subgraph = (*model_->subgraphs())[0];
   if (target_op_index >= subgraph->operators()->size()) {
@@ -46,9 +68,9 @@ int32_t ModelModifier::getWeightTensorIndex(const uint32_t& target_op_index) {
   return (*target_op->inputs())[1];
 }
 
-int32_t ModelModifier::setTensorShape(const uint32_t tensor_index, const int32_t new_shape, const uint32_t shape_index) {
+int32_t ModelModifier::setTensorShape(const int32_t tensor_index, const int32_t new_shape, const uint32_t shape_index) {
   const tflite::SubGraph* subgraph = (*model_->subgraphs())[0];
-  if (tensor_index >= subgraph->tensors()->size()) {
+  if (tensor_index < 0 || (uint32_t)tensor_index >= subgraph->tensors()->size()) {
     MicroPrintf("ERROR: tensor index out of bounds.");
     Serial1.println("ERROR: tensor index out of bounds.");
     return -1;
@@ -99,7 +121,7 @@ void ModelModifier::modifyFullyConnectedShape(const int32_t layer_index, const i
   if(target_tensor < 0 || next_target_tensor < 0) {
     return;
   }
-  int32_t res = setTensorShape(target_tensor, new_shape);
+  int32_t res = setTensorShape(target_tensor, new_shape, 0);
   if(res < 0) return;
   res = setTensorShape(next_target_tensor, new_shape, 1);
   if(res < 0) return;
@@ -110,14 +132,30 @@ void ModelModifier::modify2DConvolutionalShape(const int32_t layer_index, const 
   if(findOpCodeIndex(tflite::BuiltinOperator_CONV_2D, op_index_2d_convolutional_)) {
     MicroPrintf("ERROR: No CONV_2D layer found.");
     Serial1.println("ERROR: No CONV_2D layer found.");
-    const tflite::SubGraph* subgraph = (*model_->subgraphs())[0];
-    const tflite::Operator* target_op = (*subgraph->operators())[layer_index];
-    if(target_op->opcode_index() != op_index_fully_connected_) {
-      MicroPrintf("ERROR: Layer to modify is not Conv2D.");
-      Serial1.println("ERROR: Layer to modify is not Conv2D.");
-      return;
-    }
-
-    
   }
+  const tflite::SubGraph* subgraph = (*model_->subgraphs())[0];
+  const tflite::Operator* target_op = (*subgraph->operators())[layer_index];
+  if(target_op->opcode_index() != op_index_fully_connected_) {
+    MicroPrintf("ERROR: Layer to modify is not Conv2D.");
+    Serial1.println("ERROR: Layer to modify is not Conv2D.");
+    return;
+  }
+
+  int32_t first_weight_tensor = getWeightTensorIndex(layer_index);
+  int32_t first_output_tensor = getOutputTensorIndex(layer_index);
+  int32_t first_pool_output_tensor = getOutputTensorIndex(layer_index + 1);
+
+  if(setTensorShape(first_weight_tensor, new_shape, 0) < 0) return;
+  if(setTensorShape(first_output_tensor, new_shape, 3) < 0) return;
+  if(setTensorShape(first_pool_output_tensor, new_shape, 3) < 0) return;
+
+  int32_t second_layer_index = layer_index + 2;
+  int32_t second_weight_tensor = getWeightTensorIndex(second_layer_index);
+  int32_t second_output_tensor = getOutputTensorIndex(second_layer_index);
+  int32_t second_pool_output_tensor = getOutputTensorIndex(second_layer_index + 1);
+
+  if(setTensorShape(second_weight_tensor, new_shape, 0) < 0) return;
+  if(setTensorShape(second_weight_tensor, new_shape, 3) < 0) return;
+  if(setTensorShape(second_output_tensor, new_shape, 3) < 0) return;
+  if(setTensorShape(second_pool_output_tensor, new_shape, 3) < 0) return;
 }

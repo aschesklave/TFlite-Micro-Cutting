@@ -41,20 +41,24 @@ namespace {
 }  // namespace
 
 float measureTime(tflite::MicroInterpreter* interpreter, int runs) {
+  int correct = 0;
+  int num_images = 20;
+  const int total_predictions = num_images * runs;
+
   uint32_t start_time = micros();
   for(int i = 0; i < runs; ++i) {
-    for(int img_no = 0; img_no < 10; ++img_no) {
-      const uint8_t* curr_img = images[img_no];
+    for(int img_no = 0; img_no < num_images; ++img_no) {
+      const float* curr_img = images[img_no];
       float* image_data = input->data.f;
       for(unsigned int i = 0; i < size * size; ++i) {
-        *image_data++ = curr_img[i] / 255.0f;
+        *image_data++ = curr_img[i];
       }
       if (kTfLiteOk != interpreter->Invoke()) {
         MicroPrintf("Invoke failed.");
       }
       TfLiteTensor* output = interpreter->output(0);
       float max_percentage = -1;
-      unsigned int prediction = 666;
+      int prediction = 666;
       for(int class_idx = 0; class_idx < 10; ++class_idx) {
         if(output->data.f[class_idx] > max_percentage) {
           max_percentage = output->data.f[class_idx];
@@ -62,22 +66,25 @@ float measureTime(tflite::MicroInterpreter* interpreter, int runs) {
         }
       }
       if(prediction == labels[img_no]) {
-        MicroPrintf("Prediction for image %d was correct!", img_no);
-        Serial1.print("Prediction for image ");
-        Serial1.print(img_no);
-        Serial1.println(" was correct!");
+        correct++;
+        // MicroPrintf("Prediction for image %d was correct!", img_no);
+        // Serial1.print("Prediction for image ");
+        // Serial1.print(img_no);
+        // Serial1.println(" was correct!");
       }
       else {
-        MicroPrintf("Prediction for image %d was false! Truth: %d | Prediction: %d", img_no, labels[img_no], prediction);
-        Serial1.print("Prediction for image ");
-        Serial1.print(img_no);
-        Serial1.print(" was false! Truth: ");
-        Serial1.print(labels[img_no]);
-        Serial1.print(" | Prediction: ");
-        Serial.println(prediction);
+        // MicroPrintf("Prediction for image %d was false! Truth: %d | Prediction: %d", img_no, labels[img_no], prediction);
+        // Serial1.print("Prediction for image ");
+        // Serial1.print(img_no);
+        // Serial1.print(" was false! Truth: ");
+        // Serial1.print(labels[img_no]);
+        // Serial1.print(" | Prediction: ");
+        // Serial1.println(prediction);
       }
     }
   }
+  Serial1.print("Accuracy: ");
+  Serial1.println((float)correct / total_predictions);
   return micros() - start_time;
 }
 // float measureTime(tflite::MicroInterpreter* interpreter)
@@ -170,11 +177,12 @@ void setup() {
   Serial1.print("Duration: "); Serial1.println(duration);
   Serial.print("Duration: "); Serial.println(duration);
 
-  //uint32_t target_shape = 5;
+  uint32_t target_shape = 1;
+  modifier->modify2DConvolutionalShape(0, target_shape);
 
-  // float modified_duration = measureTime(interpreter, 1);
-  // Serial1.print("Modified duration: "); Serial1.println(modified_duration);
-  // Serial.print("Modified duration: "); Serial.println(modified_duration);
+  float modified_duration = measureTime(interpreter, 1);
+  Serial1.print("Modified duration: "); Serial1.println(modified_duration);
+  Serial.print("Modified duration: "); Serial.println(modified_duration);
 }
 
 void loop() { }

@@ -1,7 +1,6 @@
 #pragma once
-
 extern const unsigned int size;
 
-extern const unsigned char images[10][784];
-extern const unsigned int labels[10];
+extern const float images[20][32*32];
+extern const int labels[20];
 
