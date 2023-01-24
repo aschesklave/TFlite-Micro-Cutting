@@ -143,19 +143,26 @@ void ModelModifier::modify2DConvolutionalShape(const int32_t layer_index, const 
 
   int32_t first_weight_tensor = getWeightTensorIndex(layer_index);
   int32_t first_output_tensor = getOutputTensorIndex(layer_index);
-  int32_t first_pool_output_tensor = getOutputTensorIndex(layer_index + 1);
+  //int32_t first_pool_output_tensor = getOutputTensorIndex(layer_index + 1);
 
   if(setTensorShape(first_weight_tensor, new_shape, 0) < 0) return;
   if(setTensorShape(first_output_tensor, new_shape, 3) < 0) return;
-  if(setTensorShape(first_pool_output_tensor, new_shape, 3) < 0) return;
+  //if(setTensorShape(first_pool_output_tensor, new_shape, 3) < 0) return;
 
-  int32_t second_layer_index = layer_index + 2;
+  int32_t second_layer_index = layer_index + 1;
   int32_t second_weight_tensor = getWeightTensorIndex(second_layer_index);
   int32_t second_output_tensor = getOutputTensorIndex(second_layer_index);
-  int32_t second_pool_output_tensor = getOutputTensorIndex(second_layer_index + 1);
+  // int32_t second_pool_output_tensor = getOutputTensorIndex(second_layer_index + 1);
 
   if(setTensorShape(second_weight_tensor, new_shape, 0) < 0) return;
   if(setTensorShape(second_weight_tensor, new_shape, 3) < 0) return;
   if(setTensorShape(second_output_tensor, new_shape, 3) < 0) return;
-  if(setTensorShape(second_pool_output_tensor, new_shape, 3) < 0) return;
+  //if(setTensorShape(second_pool_output_tensor, new_shape, 3) < 0) return;
+
+  int32_t fc_layer_idx = 3;
+  int32_t fc_weight_tensor = getWeightTensorIndex(fc_layer_idx);
+  int32_t res = setTensorShape(fc_weight_tensor, 900, 1);
+  if(res < 0) return;
+  weight_offset[fc_layer_idx] = res;
+
 }
