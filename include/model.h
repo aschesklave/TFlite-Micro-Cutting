@@ -28,11 +28,17 @@ limitations under the License.
 // extern unsigned char one_conv_pool_tflite[];
 // extern int one_conv_pool_tflite_len;
 
-extern unsigned char two_conv_pool_tflite[];
-extern int two_conv_pool_tflite_len;
+// extern unsigned char two_conv_pool_tflite[];
+// extern int two_conv_pool_tflite_len;
 
-// extern unsigned char cnn_tflite[];
-// extern unsigned int cnn_tflite_len;
+extern unsigned char cnn_model_print_tflite[];
+extern unsigned int cnn_model_print_tflite_len;
+
+extern unsigned char cnn_tflite[];
+extern unsigned int cnn_tflite_len;
+
+extern unsigned char cnn_comparison_tflite[];
+extern unsigned int cnn_comparison_tflite_len;
 
 //extern unsigned char first_model_activations_tflite[];
 //extern unsigned int first_model_activations_tflite_len;

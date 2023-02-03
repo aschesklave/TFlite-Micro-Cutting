@@ -143,7 +143,7 @@ void setup() {
   tflite::InitializeTarget();
 
   {
-    const tflite::Model* model_const = tflite::GetModel(two_conv_pool_tflite);
+    const tflite::Model* model_const = tflite::GetModel(cnn_tflite);
     model = const_cast<tflite::Model*>(model_const);
   }
 
