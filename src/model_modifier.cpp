@@ -86,7 +86,7 @@ int8_t ModelModifier::setTensorShape(const int32_t tensor_index, const int32_t n
   if (new_shape != old_shape) {
     if(new_shape > old_shape) {
       MicroPrintf("WARNING: Increased shape.");
-      Serial1.println("WARNING: Increased shape.");
+      Serial1.print("WARNING: Increased shape.");
     }
     flatbuffers::Vector<int32_t>* shape_vector = const_cast<flatbuffers::Vector<int32_t>*>(shape_vector_const);
     shape_vector->Mutate(shape_index, new_shape);
@@ -154,7 +154,7 @@ void ModelModifier::modify2DConvolutionalShape(const int32_t layer_index, const 
     Serial1.println("ERROR: No CONV_2D layer found.");
   }
   const tflite::SubGraph* subgraph = (*model_->subgraphs())[0];
-  if(layer_index <= 0 || (uint32_t)layer_index >= subgraph->operators()->size()) {
+  if(layer_index < 0 || (uint32_t)layer_index >= subgraph->operators()->size()) {
     MicroPrintf("ERROR: layer index out of bounds.");
     Serial1.println("ERROR: layer index out of bounds.");
     return;
@@ -176,16 +176,13 @@ void ModelModifier::modify2DConvolutionalShape(const int32_t layer_index, const 
   if (0 == status) {
     status = setTensorShape(first_output_tensor, new_shape, 3, shape_diff);
   }
-
   if (0 == status) {
     status = setTensorShape(first_pool_output_tensor, new_shape, 3, shape_diff);
   }
-
   int32_t second_layer_index = layer_index + 2;
   int32_t second_weight_tensor = getWeightTensorIndex(second_layer_index);
   int32_t second_output_tensor = getOutputTensorIndex(second_layer_index);
   int32_t second_pool_output_tensor = getOutputTensorIndex(second_layer_index + 1);
-
   if (0 == status) {
     status = setTensorShape(second_weight_tensor, new_shape, 0, shape_diff);
   }
@@ -200,7 +197,7 @@ void ModelModifier::modify2DConvolutionalShape(const int32_t layer_index, const 
     status = setTensorShape(second_pool_output_tensor, new_shape, 3, shape_diff);
   }
 
-  int32_t fc_shape = getMultipliedTensorShape(second_output_tensor);
+  int32_t fc_shape = getMultipliedTensorShape(second_pool_output_tensor);
 
   // TODO: Get dense layer index
   int32_t fc_layer_idx = 5;
