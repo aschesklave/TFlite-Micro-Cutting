@@ -12,10 +12,11 @@
 class ModelModifier
 {
   private:
-    uint8_t findOpCodeIndex(const tflite::BuiltinOperator op, uint32_t &index);
+    uint8_t findOpCodeIndex(const tflite::BuiltinOperator op, int32_t &index);
 
-    uint32_t op_index_fully_connected_;
-    uint32_t op_index_2d_convolutional_;
+    int32_t op_index_fully_connected_;
+    int32_t op_index_2d_convolutional_;
+    int32_t op_index_reshape_;
     tflite::Model* model_;
     tflite::ErrorReporter* error_reporter_;
 

@@ -179,6 +179,7 @@ void setup() {
 
   uint32_t target_shape = 1;
   modifier->modify2DConvolutionalShape(0, target_shape);
+  modifier->modify2DConvolutionalShape(2, target_shape);
 
   float modified_duration = measureTime(interpreter, 1);
   Serial1.print("Modified duration: "); Serial1.println(modified_duration);

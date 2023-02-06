@@ -10,6 +10,14 @@ uint32_t current_layer_index = 0;
 ModelModifier::ModelModifier(tflite::Model* model)
   : model_(model)
 {
+  op_index_fully_connected_ = -1;
+  op_index_2d_convolutional_ = -1;
+  op_index_reshape_ = -1;
+
+  (void)findOpCodeIndex(tflite::BuiltinOperator_CONV_2D, op_index_2d_convolutional_);
+  (void)findOpCodeIndex(tflite::BuiltinOperator_FULLY_CONNECTED, op_index_fully_connected_);
+  (void)findOpCodeIndex(tflite::BuiltinOperator_RESHAPE, op_index_reshape_);
+
   const tflite::SubGraph* subgraph = (*model_->subgraphs())[0];
   weight_offset = (uint32_t*)calloc(subgraph->operators()->size(), sizeof(uint32_t));
 }
@@ -19,7 +27,7 @@ ModelModifier::~ModelModifier() {
   weight_offset = nullptr;
 }
 
-uint8_t ModelModifier::findOpCodeIndex(const tflite::BuiltinOperator op, uint32_t& index) {
+uint8_t ModelModifier::findOpCodeIndex(const tflite::BuiltinOperator op, int32_t& index) {
   const auto& opcode_vector = model_->operator_codes();
   for(auto it = opcode_vector->begin(); it != opcode_vector->end(); ++it) {
     if(it->builtin_code() == op) {
@@ -117,7 +125,7 @@ int32_t ModelModifier::getMultipliedTensorShape(const int32_t tensor_index) {
 }
 
 void ModelModifier::modifyFullyConnectedShape(const int32_t layer_index, const int32_t new_shape) {
-  if(findOpCodeIndex(tflite::BuiltinOperator_FULLY_CONNECTED, op_index_fully_connected_)) {
+  if(op_index_fully_connected_ < 0) {
     MicroPrintf("ERROR: No FULLY_CONNECTED layer found.");
     Serial1.println("ERROR: No FULLY_CONNECTED layer found.");
   }
@@ -128,7 +136,7 @@ void ModelModifier::modifyFullyConnectedShape(const int32_t layer_index, const i
     return;
   }
   const tflite::Operator* target_op = (*subgraph->operators())[layer_index];
-  if(target_op->opcode_index() != op_index_fully_connected_) {
+  if(target_op->opcode_index() != (uint32_t)op_index_fully_connected_) {
     MicroPrintf("ERROR: Layer to modify is not Fully-Connected.");
     Serial1.println("ERROR: Layer to modify is not Fully-Connected.");
     return;
@@ -149,7 +157,7 @@ void ModelModifier::modifyFullyConnectedShape(const int32_t layer_index, const i
 }
 
 void ModelModifier::modify2DConvolutionalShape(const int32_t layer_index, const int32_t new_shape) {
-  if(findOpCodeIndex(tflite::BuiltinOperator_CONV_2D, op_index_2d_convolutional_)) {
+  if(op_index_2d_convolutional_ < 0) {
     MicroPrintf("ERROR: No CONV_2D layer found.");
     Serial1.println("ERROR: No CONV_2D layer found.");
   }
@@ -160,52 +168,50 @@ void ModelModifier::modify2DConvolutionalShape(const int32_t layer_index, const 
     return;
   }
   const tflite::Operator* target_op = (*subgraph->operators())[layer_index];
-  if(target_op->opcode_index() != op_index_fully_connected_) {
+  if(target_op->opcode_index() != (uint32_t)op_index_2d_convolutional_) {
     MicroPrintf("ERROR: Layer to modify is not Conv2D.");
     Serial1.println("ERROR: Layer to modify is not Conv2D.");
     return;
   }
 
-  int32_t first_weight_tensor = getWeightTensorIndex(layer_index);
-  int32_t first_output_tensor = getOutputTensorIndex(layer_index);
-  int32_t first_pool_output_tensor = getOutputTensorIndex(layer_index + 1);
+  int32_t first_conv_weight_tensor = getWeightTensorIndex(layer_index);
+  int32_t conv_output_tensor = getOutputTensorIndex(layer_index);
+  int32_t pool_output_tensor = getOutputTensorIndex(layer_index + 1);
 
   int32_t shape_diff;
-  int8_t status = setTensorShape(first_weight_tensor, new_shape, 0, shape_diff);
+  int8_t status = setTensorShape(first_conv_weight_tensor, new_shape, 0, shape_diff);
 
   if (0 == status) {
-    status = setTensorShape(first_output_tensor, new_shape, 3, shape_diff);
+    status = setTensorShape(conv_output_tensor, new_shape, 3, shape_diff);
   }
   if (0 == status) {
-    status = setTensorShape(first_pool_output_tensor, new_shape, 3, shape_diff);
+    status = setTensorShape(pool_output_tensor, new_shape, 3, shape_diff);
   }
   int32_t second_layer_index = layer_index + 2;
-  int32_t second_weight_tensor = getWeightTensorIndex(second_layer_index);
-  int32_t second_output_tensor = getOutputTensorIndex(second_layer_index);
-  int32_t second_pool_output_tensor = getOutputTensorIndex(second_layer_index + 1);
-  if (0 == status) {
-    status = setTensorShape(second_weight_tensor, new_shape, 0, shape_diff);
-  }
-  if (0 == status) {
-    status = setTensorShape(second_weight_tensor, new_shape, 3, shape_diff);
-  }
-  if (0 == status) {
-    weight_offset[second_layer_index] += shape_diff;
-    status = setTensorShape(second_output_tensor, new_shape, 3, shape_diff);
-  }
-  if (0 == status) {
-    status = setTensorShape(second_pool_output_tensor, new_shape, 3, shape_diff);
-  }
+  const uint32_t second_layer_opcode = (*subgraph->operators())[second_layer_index]->opcode_index();
 
-  int32_t fc_shape = getMultipliedTensorShape(second_pool_output_tensor);
-
-  // TODO: Get dense layer index
-  int32_t fc_layer_idx = 5;
-  int32_t fc_weight_tensor = getWeightTensorIndex(fc_layer_idx);
-  if (0 == status) {
-    status = setTensorShape(fc_weight_tensor, fc_shape, 1, shape_diff);
+  if (second_layer_opcode == (uint32_t)op_index_2d_convolutional_) {
+    int32_t second_conv_weight_tensor = getWeightTensorIndex(second_layer_index);
+    if (0 == status) {
+      status = setTensorShape(second_conv_weight_tensor, new_shape, 3, shape_diff);
+    }
+    if (0 == status) {
+      weight_offset[second_layer_index] += shape_diff;
+    }
   }
-  if (0 == status) {
-    weight_offset[fc_layer_idx] += shape_diff;
+  else if (second_layer_opcode == (uint32_t)op_index_reshape_) {
+    int32_t fc_shape = getMultipliedTensorShape(pool_output_tensor);
+    int32_t fc_layer_idx = second_layer_index + 1;
+    int32_t fc_weight_tensor = getWeightTensorIndex(fc_layer_idx);
+    if (0 == status) {
+      status = setTensorShape(fc_weight_tensor, fc_shape, 1, shape_diff);
+    }
+    if (0 == status) {
+      weight_offset[fc_layer_idx] += shape_diff;
+    }
+  }
+  else {
+    MicroPrintf("ERROR: Unsupported model architecture.");
+    Serial1.println("ERROR: Unsupported model architecture.");
   }
 }
