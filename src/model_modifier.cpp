@@ -130,7 +130,7 @@ void ModelModifier::modifyFullyConnectedShape(const int32_t layer_index, const i
     Serial1.println("ERROR: No FULLY_CONNECTED layer found.");
   }
   const tflite::SubGraph* subgraph = (*model_->subgraphs())[0];
-  if(layer_index <= 0 || (uint32_t)layer_index >= subgraph->operators()->size()) {
+  if(layer_index < 0 || (uint32_t)layer_index >= subgraph->operators()->size()) {
     MicroPrintf("ERROR: layer index out of bounds.");
     Serial1.println("ERROR: layer index out of bounds.");
     return;
