@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "mstd_iterator": "cpp",
+        "*.x": "cpp"
+    }
+}

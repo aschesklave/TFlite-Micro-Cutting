@@ -93,8 +93,8 @@ int8_t ModelModifier::setTensorShape(const int32_t tensor_index, const int32_t n
   const int32_t old_shape = (*shape_vector_const)[shape_index];
   if (new_shape != old_shape) {
     if(new_shape > old_shape) {
-      MicroPrintf("WARNING: Increased shape.");
-      Serial1.print("WARNING: Increased shape.");
+      //MicroPrintf("WARNING: Increased shape.");
+      //Serial1.print("WARNING: Increased shape.");
     }
     flatbuffers::Vector<int32_t>* shape_vector = const_cast<flatbuffers::Vector<int32_t>*>(shape_vector_const);
     shape_vector->Mutate(shape_index, new_shape);

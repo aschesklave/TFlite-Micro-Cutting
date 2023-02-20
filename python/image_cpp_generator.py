@@ -1,14 +1,18 @@
-import pandas as pd
-csv_filename = 'data/mnist_val_normalized_truncated.csv'
-cpp_filename = 'data/images.cpp'
+csv_filename = 'data/wake_word_val_set_normalized.csv'
+cpp_filename = 'data/wake_words.cpp'
 
 img_string = ''
 label_string = ''
-
+num_samples = 20
+num_features = 1280
 with open(csv_filename, 'r') as f:
+    i = 0
     for line in f:
-        if line[-2] == 'l':
+        i += 1
+        if i == 1:
             continue
+        elif i == num_samples + 2:
+            break
 
         if line[-3] == '.':
             line_offset = 2
@@ -20,9 +24,10 @@ with open(csv_filename, 'r') as f:
         img_string += image
         label_string += label
 
-img_init_string = f'const float images[1797][64] = {{{img_string[:-2]}}};'
-label_init_string = f'const int labels[1797] = {{{label_string[:-1]}}};'
-cpp_file = f'#include "images.h"\n\n{img_init_string}\n\n{label_init_string}'
+
+img_init_string = f'const float samples[{num_samples}][{num_features}] = {{{img_string[:-2]}}};'
+label_init_string = f'const int labels[{num_samples}] = {{{label_string[:-1]}}};'
+cpp_file = f'#include "samples.h"\n\nconst unsigned int size = {num_features};\n\n{img_init_string}\n\n{label_init_string}'
 
 with open(cpp_filename, 'w') as f:
     f.write(cpp_file)
