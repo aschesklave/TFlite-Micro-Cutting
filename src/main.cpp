@@ -36,8 +36,10 @@ namespace {
   TfLiteTensor* input = nullptr;
   TfLiteTensor* output = nullptr;
   ModelModifier *modifier = nullptr;
-  constexpr int kTensorArenaSize = 5000;
+  constexpr int kTensorArenaSize = 169000;
   uint8_t tensor_arena[kTensorArenaSize];
+  constexpr uint16_t byte_size = 1280 * 4;
+  uint16_t read_index = 0u;
 }  // namespace
 
 float measureTimeConv(tflite::MicroInterpreter* interpreter, int runs) {
@@ -132,11 +134,11 @@ float measureTimeFC(tflite::MicroInterpreter* interpreter)
 void setup() {
   Serial1.begin(115200);
   while (!Serial1);
-  Serial1.println("Starting...");
+  //Serial1.println("Starting...");
   tflite::InitializeTarget();
 
   {
-    const tflite::Model* model_const = tflite::GetModel(REDS_four_convolution_tflite);
+    const tflite::Model* model_const = tflite::GetModel(REDS_cnn_three_convolutions_tflite);
     model = const_cast<tflite::Model*>(model_const);
   }
 
@@ -165,60 +167,32 @@ void setup() {
 
   input = interpreter->input(0);
   output = interpreter->output(0);
-
-
-
-  // uint32_t base_shape = 10;
-
-  // float duration_100 = measureTimeFC(interpreter);
-  // Serial1.print("Duration 100%: "); Serial1.println(duration_100);
-  // Serial.print("Duration 100%: "); Serial.println(duration_100);
-
-  // modifier->modifyFullyConnectedShape(0, base_shape / 2);
-  // modifier->modifyFullyConnectedShape(2, base_shape / 2);
-  // modifier->modifyFullyConnectedShape(4, base_shape / 2);
-  // modifier->modifyFullyConnectedShape(6, base_shape / 2);
-  // modifier->modifyFullyConnectedShape(8, base_shape / 2);
-
-  // uint32_t start_time = micros();
-  // for (int i = 0; i < 100; ++i) {
-  //   modifier->modifyFullyConnectedShape(0, base_shape / 4);
-  //   modifier->modifyFullyConnectedShape(2, base_shape / 4);
-  //   modifier->modifyFullyConnectedShape(4, base_shape / 4);
-  //   modifier->modifyFullyConnectedShape(6, base_shape / 4);
-  //   modifier->modifyFullyConnectedShape(8, base_shape / 4);
-  //   modifier->modifyFullyConnectedShape(0, base_shape);
-  //   modifier->modifyFullyConnectedShape(2, base_shape);
-  //   modifier->modifyFullyConnectedShape(4, base_shape);
-  //   modifier->modifyFullyConnectedShape(6, base_shape);
-  //   modifier->modifyFullyConnectedShape(8, base_shape);
-  // }
-  // float splitting_time = (micros() - start_time) / 500.0;
-  // Serial1.print("Splitting time: "); Serial1.println(splitting_time);
-
-  // float duration_50 = measureTimeFC(interpreter);
-  // Serial1.print("Duration 50%: "); Serial1.println(duration_50);
-  // Serial.print("Duration 50%: "); Serial.println(duration_50);
-
-  // modifier->modifyFullyConnectedShape(0, base_shape / 4);
-  // modifier->modifyFullyConnectedShape(2, base_shape / 4);
-  // modifier->modifyFullyConnectedShape(4, base_shape / 4);
-  // modifier->modifyFullyConnectedShape(6, base_shape / 4);
-  // modifier->modifyFullyConnectedShape(8, base_shape / 4);
-
-  // float duration_25 = measureTimeFC(interpreter);
-  // Serial1.print("Duration 25%: "); Serial1.println(duration_25);
-  // Serial.print("Duration 25%: "); Serial.println(duration_25);
-
-  // modifier->modifyFullyConnectedShape(0, base_shape / 8);
-  // modifier->modifyFullyConnectedShape(2, base_shape / 8);
-  // modifier->modifyFullyConnectedShape(4, base_shape / 8);
-  // modifier->modifyFullyConnectedShape(6, base_shape / 8);
-  // modifier->modifyFullyConnectedShape(8, base_shape / 8);
-
-  // float duration_12 = measureTimeFC(interpreter);
-  // Serial1.print("Duration 12.5%: "); Serial1.println(duration_12);
-  // Serial.print("Duration 12.5%: "); Serial.println(duration_12);
 }
 
-void loop() { }
+void loop() {
+  if (Serial1.available() > 0) input->data.raw[read_index++] = static_cast<char>(Serial1.read());
+
+  if (byte_size == read_index) {
+    read_index = 0u;
+    Serial.println();
+    TfLiteTensor *output = interpreter->output(0);
+    TfLiteStatus invoke_status = interpreter->Invoke();
+    if (invoke_status != kTfLiteOk) {
+      MicroPrintf("Invoke failed!");
+    }
+    else
+    {
+      float max_percentage = -1;
+      int prediction = 666;
+      for (int class_idx = 0; class_idx < 8; ++class_idx)
+      {
+        if (output->data.f[class_idx] > max_percentage)
+        {
+          max_percentage = output->data.f[class_idx];
+          prediction = class_idx;
+        }
+      }
+      Serial1.println(prediction);
+    }
+  }
+}
