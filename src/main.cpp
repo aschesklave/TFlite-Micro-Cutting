@@ -83,54 +83,6 @@ float measureTimeConv(tflite::MicroInterpreter* interpreter, int runs) {
   return micros() - start_time;
 }
 
-float measureTimeFC(tflite::MicroInterpreter* interpreter)
-{
-  const int num_images = 1797;
-  const int num_classes = 10;
-
-  unsigned int num_correct = 0;
-  uint32_t start_time = micros();
-  for(int i = 0; i < num_images; ++i)
-  {
-    const float* curr_img = samples[i];
-    float* sample_data = input->data.f;
-    for(unsigned int i = 0; i < size; ++i)
-    {
-      *sample_data++ = curr_img[i];
-    }
-
-    TfLiteStatus invoke_status = interpreter->Invoke();
-    if (invoke_status != kTfLiteOk) {
-      MicroPrintf("Invoke failed!");
-      return 0;
-    }
-
-    float max_percentage = -1;
-    int prediction = 666;
-    for(int class_idx = 0; class_idx < num_classes; ++class_idx)
-    {
-      //MicroPrintf("Class %d: %f", class_idx, output->data.f[class_idx]);
-      //Serial1.print("Class "); Serial1.print(class_idx); Serial1.print(": "); Serial1.println(output->data.f[class_idx]);
-      if(output->data.f[class_idx] > max_percentage)
-      {
-        max_percentage = output->data.f[class_idx];
-        prediction = class_idx;
-      }
-    }
-    int truth = labels[i];
-    if(truth == prediction) {
-      num_correct += 1;
-    }
-    //MicroPrintf("Max prob: %f; Prediction: class %d; Correct: %d", max_percentage, prediction, truth);
-    //Serial1.print("Max prob: "); Serial1.print(max_percentage); Serial1.print("; Prediction: class ");
-    //Serial1.print(prediction); Serial1.print("; Correct: "); Serial1.println(truth);
-  }
-  float acc = num_correct / (float)num_images;
-  Serial1.print("Accuracy: ");Serial1.println(acc * 100);
-  Serial.print("Accuracy: ");Serial.println(acc * 100);
-  return (micros() - start_time) / (float)num_images;
-}
-
 void setup() {
   Serial1.begin(115200);
   while (!Serial1);
@@ -167,6 +119,21 @@ void setup() {
 
   input = interpreter->input(0);
   output = interpreter->output(0);
+
+  constexpr uint32_t new_shape = 14;
+
+  //modifier->modify2DConvolutionalShape(0, new_shape);
+  modifier->modify2DConvolutionalShape(2, new_shape);
+  modifier->modify2DConvolutionalShape(4, new_shape);
+}
+
+void printSerialized(arduino::UART* interface, uint8_t prediction, uint32_t time)
+{
+  interface->print("{\"prediction\":\"");
+  interface->print(prediction);
+  interface->print("\",\"time\":\"");
+  interface->print(time);
+  interface->println("\"}");
 }
 
 void loop() {
@@ -174,17 +141,18 @@ void loop() {
 
   if (byte_size == read_index) {
     read_index = 0u;
-    Serial.println();
     TfLiteTensor *output = interpreter->output(0);
+    uint32_t start_time = micros();
     TfLiteStatus invoke_status = interpreter->Invoke();
+    uint32_t inference_time = micros() - start_time;
     if (invoke_status != kTfLiteOk) {
       MicroPrintf("Invoke failed!");
     }
     else
     {
       float max_percentage = -1;
-      int prediction = 666;
-      for (int class_idx = 0; class_idx < 8; ++class_idx)
+      uint8_t prediction = 255;
+      for (uint8_t class_idx = 0; class_idx < 8; ++class_idx)
       {
         if (output->data.f[class_idx] > max_percentage)
         {
@@ -192,7 +160,7 @@ void loop() {
           prediction = class_idx;
         }
       }
-      Serial1.println(prediction);
+      printSerialized(&Serial1, prediction, inference_time);
     }
   }
 }
