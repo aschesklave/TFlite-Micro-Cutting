@@ -40,6 +40,8 @@ namespace {
   uint8_t tensor_arena[kTensorArenaSize];
   constexpr uint16_t byte_size = 1280 * 4;
   uint16_t read_index = 0u;
+  uint32_t last_read = 0u;
+  constexpr uint32_t kWaitTime = 500u;
 }  // namespace
 
 float measureTimeConv(tflite::MicroInterpreter* interpreter, int runs) {
@@ -111,18 +113,13 @@ void setup() {
   interpreter = &static_interpreter;
 
   TfLiteStatus allocate_status = interpreter->AllocateTensors();
-  if (allocate_status != kTfLiteOk) {
-    Serial1.println("AllocateTensors() failed");
-    MicroPrintf("AllocateTensors() failed");
-    return;
-  }
 
   input = interpreter->input(0);
   output = interpreter->output(0);
 
   constexpr uint32_t new_shape = 14;
 
-  //modifier->modify2DConvolutionalShape(0, new_shape);
+  modifier->modify2DConvolutionalShape(0, new_shape);
   modifier->modify2DConvolutionalShape(2, new_shape);
   modifier->modify2DConvolutionalShape(4, new_shape);
 }
@@ -137,19 +134,40 @@ void printSerialized(arduino::UART* interface, uint8_t prediction, uint32_t time
 }
 
 void loop() {
-  if (Serial1.available() > 0) input->data.raw[read_index++] = static_cast<char>(Serial1.read());
+  /* Reset last read time if there is no data in memory. */
+  if (0u == read_index) {
+    last_read = millis();
+  }
+  /* Look for incoming transmission. */
+  if (Serial1.available() > 0) {
+    /* If the last incoming transmission was too long ago reset read index before writing to buffer. */
+    if (millis() - last_read > kWaitTime) {
+      read_index = 0u;
+    }
+    /* Write current incoming byte to buffer. */
+    input->data.raw[read_index++] = static_cast<char>(Serial1.read());
+    /* Update last read index. */
+    last_read = millis();
+  }
 
+  /* If a complete sample was received. */
   if (byte_size == read_index) {
     read_index = 0u;
     TfLiteTensor *output = interpreter->output(0);
+    /* Save the start time, */
     uint32_t start_time = micros();
+    /* Invoke the inference. */
     TfLiteStatus invoke_status = interpreter->Invoke();
+    /* Calculate inference time. */
     uint32_t inference_time = micros() - start_time;
+    /* If there was an error during the inference cancel and print error. */
     if (invoke_status != kTfLiteOk) {
-      MicroPrintf("Invoke failed!");
+      MicroPrintf("Invoke failed!\r\n");
     }
+    /* If the inference was successful. */
     else
     {
+      /* Get index of prediction. */
       float max_percentage = -1;
       uint8_t prediction = 255;
       for (uint8_t class_idx = 0; class_idx < 8; ++class_idx)
@@ -160,6 +178,7 @@ void loop() {
           prediction = class_idx;
         }
       }
+      /* Send prediction back to Host. */
       printSerialized(&Serial1, prediction, inference_time);
     }
   }
