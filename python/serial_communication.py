@@ -1,6 +1,7 @@
 import serial
 import numpy as np
 import json
+import pandas as pd
 
 test_data = np.loadtxt('data/wake_word_val_set_normalized.csv', delimiter=',', skiprows=1)
 
@@ -52,3 +53,6 @@ mean_infer_time = infer_times.sum() / dataset_len
 
 print(f'Accuracy: {accuracy}')
 print(f'Mean inference time: {mean_infer_time}')
+
+eval_data = pd.DataFrame({'truth': truths, 'pred': predictions, 'time': times})
+eval_data.to_csv('data/cnn28_ww.csv', index=False)

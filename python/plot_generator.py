@@ -3,6 +3,12 @@ from matplotlib.lines import Line2D
 
 def plot_acc_time():
     data_list = []
+    # data_dict = {'model_1_acc': [86.03, 79.14, 66.03, 39.01], 'model_1_time': [614264.12, 215747.34, 85451.85, 31686.02],
+    #              'point_labels': ['100%', '50%', '25%', '12.5%'],
+    #              'filename': 'cnn'
+    #              }
+    # data_list.append(data_dict)
+
     data_dict = {'model_1_acc': [99.44, 96.22, 56.71, 26.38], 'model_1_time': [239.51, 176.42, 137.72, 124.71],
                  'model_2_acc': [98.66, 85.59, 10.13, 10.13], 'model_2_time': [581.16, 441.99, 352.39, 324.56],
                  'model_3_acc': [99.83, 96.88, 66.50, 36.78], 'model_3_time': [427.33, 331.46, 273.64, 253.96],
@@ -11,21 +17,21 @@ def plot_acc_time():
                  }
     data_list.append(data_dict)
 
-    data_dict = {'model_1_acc': [99.30, 99.30, 98.95, 98.59], 'model_1_time': [125.31, 96.63, 79.39, 73.71],
-                 'model_2_acc': [99.82, 99.65, 62.74, 62.74], 'model_2_time': [455.87, 345.44, 278.95, 256.77],
-                 'model_3_acc': [99.47, 99.47, 99.47, 99.12], 'model_3_time': [261.20, 193.08, 152.19, 138.58],
-                 'point_labels': ['100%', '50%', '25%', '12.5%'],
-                 'filename': 'cancer'
-                 }
-    data_list.append(data_dict)
-
-    data_dict = {'model_1_acc': [100.0, 100.0, 99.44, 60.11], 'model_1_time': [105.94, 90.33, 80.34, 77.32],
-                 'model_2_acc': [99.44, 99.44, 97.75, 60.11], 'model_2_time': [443.44, 346.73, 288.75, 269.19],
-                 'model_3_acc': [100.0, 100.0, 82.58, 82.58], 'model_3_time': [247.69, 193.60, 160.62, 149.74],
-                 'point_labels': ['100%', '50%', '25%', '12.5%'],
-                 'filename': 'wine'
-                 }
-    data_list.append(data_dict)
+    # data_dict = {'model_1_acc': [99.30, 99.30, 98.95, 98.59], 'model_1_time': [125.31, 96.63, 79.39, 73.71],
+    #              'model_2_acc': [99.82, 99.65, 62.74, 62.74], 'model_2_time': [455.87, 345.44, 278.95, 256.77],
+    #              'model_3_acc': [99.47, 99.47, 99.47, 99.12], 'model_3_time': [261.20, 193.08, 152.19, 138.58],
+    #              'point_labels': ['100%', '50%', '25%', '12.5%'],
+    #              'filename': 'cancer'
+    #              }
+    # data_list.append(data_dict)
+    #
+    # data_dict = {'model_1_acc': [100.0, 100.0, 99.44, 60.11], 'model_1_time': [105.94, 90.33, 80.34, 77.32],
+    #              'model_2_acc': [99.44, 99.44, 97.75, 60.11], 'model_2_time': [443.44, 346.73, 288.75, 269.19],
+    #              'model_3_acc': [100.0, 100.0, 82.58, 82.58], 'model_3_time': [247.69, 193.60, 160.62, 149.74],
+    #              'point_labels': ['100%', '50%', '25%', '12.5%'],
+    #              'filename': 'wine'
+    #              }
+    # data_list.append(data_dict)
 
     markers = ['o', 's', 'D', '^']
     legend_elements = [
@@ -61,11 +67,16 @@ def plot_acc_time():
             plt.scatter(i, j, marker=m, color='g')
 
         ax.legend(handles=legend_elements, loc='lower right')
-        plt.savefig(f'plots/{d["filename"]}_acc_time.eps', format='eps', bbox_inches='tight')
+        plt.savefig(f'plots/{d["filename"]}_acc_time.pdf', format='pdf', bbox_inches='tight')
         plt.show()
 
 def plot_size_time():
     data_list = []
+    # data_dict = {'model_1_time': [239.51, 176.42, 137.72, 124.71],
+    #              'filename': 'cnn'
+    #              }
+    # data_list.append(data_dict)
+
     data_dict = {'model_1_time': [239.51, 176.42, 137.72, 124.71],
                  'model_2_time': [581.16, 441.99, 352.39, 324.56],
                  'model_3_time': [427.33, 331.46, 273.64, 253.96],
@@ -73,19 +84,19 @@ def plot_size_time():
                  }
     data_list.append(data_dict)
 
-    data_dict = {'model_1_time': [125.31, 96.63, 79.39, 73.71],
-                 'model_2_time': [455.87, 345.44, 278.95, 256.77],
-                 'model_3_time': [261.20, 193.08, 152.19, 138.58],
-                 'filename': 'cancer'
-                 }
-    data_list.append(data_dict)
-
-    data_dict = {'model_1_time': [105.94, 90.33, 80.34, 77.32],
-                 'model_2_time': [443.44, 346.73, 288.75, 269.19],
-                 'model_3_time': [247.69, 193.60, 160.62, 149.74],
-                 'filename': 'wine'
-                 }
-    data_list.append(data_dict)
+    # data_dict = {'model_1_time': [125.31, 96.63, 79.39, 73.71],
+    #              'model_2_time': [455.87, 345.44, 278.95, 256.77],
+    #              'model_3_time': [261.20, 193.08, 152.19, 138.58],
+    #              'filename': 'cancer'
+    #              }
+    # data_list.append(data_dict)
+    #
+    # data_dict = {'model_1_time': [105.94, 90.33, 80.34, 77.32],
+    #              'model_2_time': [443.44, 346.73, 288.75, 269.19],
+    #              'model_3_time': [247.69, 193.60, 160.62, 149.74],
+    #              'filename': 'wine'
+    #              }
+    # data_list.append(data_dict)
 
     sizes = [100, 50, 25, 12.5]
     for d in data_list:
@@ -99,8 +110,9 @@ def plot_size_time():
         ax.plot(sizes, d['model_3_time'], linewidth=1.0, marker='', color='g',
                 label='Third Model')
         ax.legend(loc='upper left')
-        plt.savefig(f'plots/{d["filename"]}_size_time.eps', format='eps', bbox_inches='tight')
+        plt.savefig(f'plots/{d["filename"]}_size_time.pdf', format='pdf', bbox_inches='tight')
         plt.show()
 
+
 plot_size_time()
-#plot_acc_time()
+plot_acc_time()
