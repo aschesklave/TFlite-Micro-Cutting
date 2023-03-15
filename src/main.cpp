@@ -117,7 +117,11 @@ void setup() {
   input = interpreter->input(0);
   output = interpreter->output(0);
 
-  constexpr uint32_t new_shape = 14;
+  modifyCNN();
+}
+
+void modifyCNN() {
+  constexpr uint32_t new_shape = 3;
 
   modifier->modify2DConvolutionalShape(0, new_shape);
   modifier->modify2DConvolutionalShape(2, new_shape);
@@ -133,7 +137,7 @@ void printSerialized(arduino::UART* interface, uint8_t prediction, uint32_t time
   interface->println("\"}");
 }
 
-void loop() {
+void processHostSample(void) {
   /* Reset last read time if there is no data in memory. */
   if (0u == read_index) {
     last_read = millis();
@@ -182,4 +186,8 @@ void loop() {
       printSerialized(&Serial1, prediction, inference_time);
     }
   }
+}
+
+void loop() {
+  processHostSample();
 }
