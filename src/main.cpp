@@ -36,8 +36,12 @@ namespace {
   TfLiteTensor* input = nullptr;
   TfLiteTensor* output = nullptr;
   ModelModifier *modifier = nullptr;
-  constexpr int kTensorArenaSize = 5000;
+  constexpr int kTensorArenaSize = 169000;
   uint8_t tensor_arena[kTensorArenaSize];
+  constexpr uint16_t byte_size = 1280 * 4;
+  uint16_t read_index = 0u;
+  uint32_t last_read = 0u;
+  constexpr uint32_t kWaitTime = 500u;
 }  // namespace
 
 float measureTimeConv(tflite::MicroInterpreter* interpreter, int runs) {
@@ -81,62 +85,14 @@ float measureTimeConv(tflite::MicroInterpreter* interpreter, int runs) {
   return micros() - start_time;
 }
 
-float measureTimeFC(tflite::MicroInterpreter* interpreter)
-{
-  const int num_images = 1797;
-  const int num_classes = 10;
-
-  unsigned int num_correct = 0;
-  uint32_t start_time = micros();
-  for(int i = 0; i < num_images; ++i)
-  {
-    const float* curr_img = samples[i];
-    float* sample_data = input->data.f;
-    for(unsigned int i = 0; i < size; ++i)
-    {
-      *sample_data++ = curr_img[i];
-    }
-
-    TfLiteStatus invoke_status = interpreter->Invoke();
-    if (invoke_status != kTfLiteOk) {
-      MicroPrintf("Invoke failed!");
-      return 0;
-    }
-
-    float max_percentage = -1;
-    int prediction = 666;
-    for(int class_idx = 0; class_idx < num_classes; ++class_idx)
-    {
-      //MicroPrintf("Class %d: %f", class_idx, output->data.f[class_idx]);
-      //Serial1.print("Class "); Serial1.print(class_idx); Serial1.print(": "); Serial1.println(output->data.f[class_idx]);
-      if(output->data.f[class_idx] > max_percentage)
-      {
-        max_percentage = output->data.f[class_idx];
-        prediction = class_idx;
-      }
-    }
-    int truth = labels[i];
-    if(truth == prediction) {
-      num_correct += 1;
-    }
-    //MicroPrintf("Max prob: %f; Prediction: class %d; Correct: %d", max_percentage, prediction, truth);
-    //Serial1.print("Max prob: "); Serial1.print(max_percentage); Serial1.print("; Prediction: class ");
-    //Serial1.print(prediction); Serial1.print("; Correct: "); Serial1.println(truth);
-  }
-  float acc = num_correct / (float)num_images;
-  Serial1.print("Accuracy: ");Serial1.println(acc * 100);
-  Serial.print("Accuracy: ");Serial.println(acc * 100);
-  return (micros() - start_time) / (float)num_images;
-}
-
 void setup() {
   Serial1.begin(115200);
   while (!Serial1);
-  Serial1.println("Starting...");
+  //Serial1.println("Starting...");
   tflite::InitializeTarget();
 
   {
-    const tflite::Model* model_const = tflite::GetModel(REDS_four_convolution_tflite);
+    const tflite::Model* model_const = tflite::GetModel(REDS_cnn_three_convolutions_tflite);
     model = const_cast<tflite::Model*>(model_const);
   }
 
@@ -157,68 +113,81 @@ void setup() {
   interpreter = &static_interpreter;
 
   TfLiteStatus allocate_status = interpreter->AllocateTensors();
-  if (allocate_status != kTfLiteOk) {
-    Serial1.println("AllocateTensors() failed");
-    MicroPrintf("AllocateTensors() failed");
-    return;
-  }
 
   input = interpreter->input(0);
   output = interpreter->output(0);
 
-
-
-  // uint32_t base_shape = 10;
-
-  // float duration_100 = measureTimeFC(interpreter);
-  // Serial1.print("Duration 100%: "); Serial1.println(duration_100);
-  // Serial.print("Duration 100%: "); Serial.println(duration_100);
-
-  // modifier->modifyFullyConnectedShape(0, base_shape / 2);
-  // modifier->modifyFullyConnectedShape(2, base_shape / 2);
-  // modifier->modifyFullyConnectedShape(4, base_shape / 2);
-  // modifier->modifyFullyConnectedShape(6, base_shape / 2);
-  // modifier->modifyFullyConnectedShape(8, base_shape / 2);
-
-  // uint32_t start_time = micros();
-  // for (int i = 0; i < 100; ++i) {
-  //   modifier->modifyFullyConnectedShape(0, base_shape / 4);
-  //   modifier->modifyFullyConnectedShape(2, base_shape / 4);
-  //   modifier->modifyFullyConnectedShape(4, base_shape / 4);
-  //   modifier->modifyFullyConnectedShape(6, base_shape / 4);
-  //   modifier->modifyFullyConnectedShape(8, base_shape / 4);
-  //   modifier->modifyFullyConnectedShape(0, base_shape);
-  //   modifier->modifyFullyConnectedShape(2, base_shape);
-  //   modifier->modifyFullyConnectedShape(4, base_shape);
-  //   modifier->modifyFullyConnectedShape(6, base_shape);
-  //   modifier->modifyFullyConnectedShape(8, base_shape);
-  // }
-  // float splitting_time = (micros() - start_time) / 500.0;
-  // Serial1.print("Splitting time: "); Serial1.println(splitting_time);
-
-  // float duration_50 = measureTimeFC(interpreter);
-  // Serial1.print("Duration 50%: "); Serial1.println(duration_50);
-  // Serial.print("Duration 50%: "); Serial.println(duration_50);
-
-  // modifier->modifyFullyConnectedShape(0, base_shape / 4);
-  // modifier->modifyFullyConnectedShape(2, base_shape / 4);
-  // modifier->modifyFullyConnectedShape(4, base_shape / 4);
-  // modifier->modifyFullyConnectedShape(6, base_shape / 4);
-  // modifier->modifyFullyConnectedShape(8, base_shape / 4);
-
-  // float duration_25 = measureTimeFC(interpreter);
-  // Serial1.print("Duration 25%: "); Serial1.println(duration_25);
-  // Serial.print("Duration 25%: "); Serial.println(duration_25);
-
-  // modifier->modifyFullyConnectedShape(0, base_shape / 8);
-  // modifier->modifyFullyConnectedShape(2, base_shape / 8);
-  // modifier->modifyFullyConnectedShape(4, base_shape / 8);
-  // modifier->modifyFullyConnectedShape(6, base_shape / 8);
-  // modifier->modifyFullyConnectedShape(8, base_shape / 8);
-
-  // float duration_12 = measureTimeFC(interpreter);
-  // Serial1.print("Duration 12.5%: "); Serial1.println(duration_12);
-  // Serial.print("Duration 12.5%: "); Serial.println(duration_12);
+  modifyCNN();
 }
 
-void loop() { }
+void modifyCNN() {
+  constexpr uint32_t new_shape = 3;
+
+  modifier->modify2DConvolutionalShape(0, new_shape);
+  modifier->modify2DConvolutionalShape(2, new_shape);
+  modifier->modify2DConvolutionalShape(4, new_shape);
+}
+
+void printSerialized(arduino::UART* interface, uint8_t prediction, uint32_t time)
+{
+  interface->print("{\"prediction\":\"");
+  interface->print(prediction);
+  interface->print("\",\"time\":\"");
+  interface->print(time);
+  interface->println("\"}");
+}
+
+void processHostSample(void) {
+  /* Reset last read time if there is no data in memory. */
+  if (0u == read_index) {
+    last_read = millis();
+  }
+  /* Look for incoming transmission. */
+  if (Serial1.available() > 0) {
+    /* If the last incoming transmission was too long ago reset read index before writing to buffer. */
+    if (millis() - last_read > kWaitTime) {
+      read_index = 0u;
+    }
+    /* Write current incoming byte to buffer. */
+    input->data.raw[read_index++] = static_cast<char>(Serial1.read());
+    /* Update last read index. */
+    last_read = millis();
+  }
+
+  /* If a complete sample was received. */
+  if (byte_size == read_index) {
+    read_index = 0u;
+    TfLiteTensor *output = interpreter->output(0);
+    /* Save the start time, */
+    uint32_t start_time = micros();
+    /* Invoke the inference. */
+    TfLiteStatus invoke_status = interpreter->Invoke();
+    /* Calculate inference time. */
+    uint32_t inference_time = micros() - start_time;
+    /* If there was an error during the inference cancel and print error. */
+    if (invoke_status != kTfLiteOk) {
+      MicroPrintf("Invoke failed!\r\n");
+    }
+    /* If the inference was successful. */
+    else
+    {
+      /* Get index of prediction. */
+      float max_percentage = -1;
+      uint8_t prediction = 255;
+      for (uint8_t class_idx = 0; class_idx < 8; ++class_idx)
+      {
+        if (output->data.f[class_idx] > max_percentage)
+        {
+          max_percentage = output->data.f[class_idx];
+          prediction = class_idx;
+        }
+      }
+      /* Send prediction back to Host. */
+      printSerialized(&Serial1, prediction, inference_time);
+    }
+  }
+}
+
+void loop() {
+  processHostSample();
+}
