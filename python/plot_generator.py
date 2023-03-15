@@ -9,13 +9,22 @@ def plot_acc_time():
     #              }
     # data_list.append(data_dict)
 
-    data_dict = {'model_1_acc': [99.44, 96.22, 56.71, 26.38], 'model_1_time': [239.51, 176.42, 137.72, 124.71],
-                 'model_2_acc': [98.66, 85.59, 10.13, 10.13], 'model_2_time': [581.16, 441.99, 352.39, 324.56],
-                 'model_3_acc': [99.83, 96.88, 66.50, 36.78], 'model_3_time': [427.33, 331.46, 273.64, 253.96],
-                 'point_labels': ['100%', '50%', '25%', '12.5%'],
-                 'filename': 'mnist'
+    # 400% data
+    data_dict = {'model_1_acc': [98.89, 98.66, 98.22, 92.93, 44.46, 18.25], 'model_1_time': [617.92, 365.16, 238.87, 175.69, 137.15, 124.29],
+                 'model_2_acc': [98.33, 97.83, 97.44, 24.76, 9.91, 9.91], 'model_2_time': [3293.64, 1854.44, 1135.83, 773.42, 556.07, 484.25],
+                 'model_3_acc': [98.33, 98.33, 98.44, 95.72, 64.83, 23.43], 'model_3_time': [1002.22, 618.38, 426.57, 330.60, 272.81, 253.39],
+                 'point_labels': ['400%', '200%', '100%', '50%', '25%', '12.5%'],
+                 'filename': 'mnist_400'
                  }
     data_list.append(data_dict)
+
+    # data_dict = {'model_1_acc': [99.44, 96.22, 56.71, 26.38], 'model_1_time': [239.51, 176.42, 137.72, 124.71],
+    #              'model_2_acc': [98.66, 85.59, 10.13, 10.13], 'model_2_time': [581.16, 441.99, 352.39, 324.56],
+    #              'model_3_acc': [99.83, 96.88, 66.50, 36.78], 'model_3_time': [427.33, 331.46, 273.64, 253.96],
+    #              'point_labels': ['100%', '50%', '25%', '12.5%'],
+    #              'filename': 'mnist'
+    #              }
+    # data_list.append(data_dict)
 
     # data_dict = {'model_1_acc': [99.30, 99.30, 98.95, 98.59], 'model_1_time': [125.31, 96.63, 79.39, 73.71],
     #              'model_2_acc': [99.82, 99.65, 62.74, 62.74], 'model_2_time': [455.87, 345.44, 278.95, 256.77],
@@ -77,12 +86,20 @@ def plot_size_time():
     #              }
     # data_list.append(data_dict)
 
-    data_dict = {'model_1_time': [239.51, 176.42, 137.72, 124.71],
-                 'model_2_time': [581.16, 441.99, 352.39, 324.56],
-                 'model_3_time': [427.33, 331.46, 273.64, 253.96],
-                 'filename': 'mnist'
+    # 400%
+    data_dict = {'model_1_time': [617.92, 365.16, 238.87, 175.69, 137.15, 124.29],
+                 'model_2_time': [3293.64, 1854.44, 1135.83, 773.42, 556.07, 484.25],
+                 'model_3_time': [1002.22, 618.38, 426.57, 330.60, 272.81, 253.39],
+                 'filename': 'mnist_400'
                  }
     data_list.append(data_dict)
+
+    # data_dict = {'model_1_time': [239.51, 176.42, 137.72, 124.71],
+    #              'model_2_time': [581.16, 441.99, 352.39, 324.56],
+    #              'model_3_time': [427.33, 331.46, 273.64, 253.96],
+    #              'filename': 'mnist'
+    #              }
+    # data_list.append(data_dict)
 
     # data_dict = {'model_1_time': [125.31, 96.63, 79.39, 73.71],
     #              'model_2_time': [455.87, 345.44, 278.95, 256.77],
@@ -98,7 +115,7 @@ def plot_size_time():
     #              }
     # data_list.append(data_dict)
 
-    sizes = [100, 50, 25, 12.5]
+    sizes = [400, 200, 100, 50, 25, 12.5]
     for d in data_list:
         fig, ax = plt.subplots()
         plt.xlabel('Model size [%]')
