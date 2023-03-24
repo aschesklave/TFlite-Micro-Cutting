@@ -31,23 +31,10 @@ limitations under the License.
 // extern unsigned char cnn_tflite[];
 // extern unsigned int cnn_tflite_len;
 
-extern unsigned char third_model_activations_400_tflite[];
-extern unsigned int third_model_activations_400_tflite_len;
+// extern unsigned char third_model_activations_400_tflite[];
+// extern unsigned int third_model_activations_400_tflite_len;
 
-// extern unsigned char first_model_NO_activations_tflite[];
-// extern unsigned int first_model_NO_activations_tflite_len;
-
-// extern unsigned char second_model_activations_tflite[];
-// extern unsigned int second_model_activations_tflite_len;
-
-// extern unsigned char second_model_NO_activations_tflite[];
-// extern unsigned int second_model_NO_activations_tflite_len;
-
-// extern unsigned char third_model_activations_tflite[];
-// extern unsigned int third_model_activations_tflite_len;
-
-// extern unsigned char third_model_NO_activations_tflite[];
-// extern unsigned int third_model_NO_activations_tflite_len;
-
+extern unsigned char second_model_activations_tflite[];
+extern unsigned int second_model_activations_tflite_len;
 
 #endif  // TENSORFLOW_LITE_MICRO_EXAMPLES_HELLO_WORLD_MODEL_H_

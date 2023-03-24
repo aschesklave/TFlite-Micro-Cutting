@@ -215,3 +215,24 @@ void ModelModifier::modify2DConvolutionalShape(const int32_t layer_index, const 
     Serial1.println("ERROR: Unsupported model architecture.");
   }
 }
+
+uint32_t ModelModifier::calcModelParams(bool is_cnn) {
+  uint32_t param_count = 0;
+  const tflite::SubGraph* subgraph = (*model_->subgraphs())[0];
+
+  if(is_cnn) {
+
+  }
+  else {
+    for(uint8_t i = 0; i < subgraph->operators()->size() - 1; ++i) {
+      const flatbuffers::Vector<int32_t>* weight_shape_vector = (*subgraph->tensors())[getWeightTensorIndex(i)]->shape();
+      uint32_t layer_param_count = 1;
+      for(auto it = weight_shape_vector->begin(); it != weight_shape_vector->end(); ++it) {
+        layer_param_count *= *it;
+      }
+      param_count += layer_param_count;
+    }
+  }
+
+  return param_count;
+}

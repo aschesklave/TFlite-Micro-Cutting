@@ -142,57 +142,73 @@ void modifyCNN() {
 }
 
 void testFullyConnected() {
-  uint32_t base_shape = 40;
+  uint32_t base_shape = 10;
+  Serial1.print("Base shape: "); Serial1.println(base_shape);
+  Serial.print("Base shape: "); Serial.println(base_shape);
 
+  uint32_t num_parameters_400 = modifier->calcModelParams(false);
+  Serial1.print("Num Params 400%: "); Serial1.println(num_parameters_400);
+  Serial.print("Num Params 400%: "); Serial.println(num_parameters_400);
   float duration_400 = measureTimeFC(interpreter);
   Serial1.print("Duration 400%: "); Serial1.println(duration_400);
   Serial.print("Duration 400%: "); Serial.println(duration_400);
 
   modifier->modifyFullyConnectedShape(0, base_shape / 2);
-  // modifier->modifyFullyConnectedShape(2, base_shape / 2);
-  // modifier->modifyFullyConnectedShape(4, base_shape / 2);
-  // modifier->modifyFullyConnectedShape(6, base_shape / 2);
-  // modifier->modifyFullyConnectedShape(8, base_shape / 2);
+  modifier->modifyFullyConnectedShape(2, base_shape / 2);
+  modifier->modifyFullyConnectedShape(4, base_shape / 2);
+  modifier->modifyFullyConnectedShape(6, base_shape / 2);
+  modifier->modifyFullyConnectedShape(8, base_shape / 2);
+  uint32_t num_parameters_200 = modifier->calcModelParams(false);
+  Serial1.print("Num Params 200%: "); Serial1.println(num_parameters_200);
+  Serial.print("Num Params 200%: "); Serial.println(num_parameters_200);
   float duration_200 = measureTimeFC(interpreter);
   Serial1.print("Duration 200%: "); Serial1.println(duration_200);
   Serial.print("Duration 200%: "); Serial.println(duration_200);
 
   modifier->modifyFullyConnectedShape(0, base_shape / 4);
-  // modifier->modifyFullyConnectedShape(2, base_shape / 4);
-  // modifier->modifyFullyConnectedShape(4, base_shape / 4);
-  // modifier->modifyFullyConnectedShape(6, base_shape / 4);
-  // modifier->modifyFullyConnectedShape(8, base_shape / 4);
-
+  modifier->modifyFullyConnectedShape(2, base_shape / 4);
+  modifier->modifyFullyConnectedShape(4, base_shape / 4);
+  modifier->modifyFullyConnectedShape(6, base_shape / 4);
+  modifier->modifyFullyConnectedShape(8, base_shape / 4);
+  uint32_t num_parameters_100 = modifier->calcModelParams(false);
+  Serial1.print("Num Params 100%: "); Serial1.println(num_parameters_100);
+  Serial.print("Num Params 100%: "); Serial.println(num_parameters_100);
   float duration_100 = measureTimeFC(interpreter);
   Serial1.print("Duration 100%: "); Serial1.println(duration_100);
   Serial.print("Duration 100%: "); Serial.println(duration_100);
 
   modifier->modifyFullyConnectedShape(0, base_shape / 8);
-  // modifier->modifyFullyConnectedShape(2, base_shape / 8);
-  // modifier->modifyFullyConnectedShape(4, base_shape / 8);
-  // modifier->modifyFullyConnectedShape(6, base_shape / 8);
-  // modifier->modifyFullyConnectedShape(8, base_shape / 8);
-
+  modifier->modifyFullyConnectedShape(2, base_shape / 8);
+  modifier->modifyFullyConnectedShape(4, base_shape / 8);
+  modifier->modifyFullyConnectedShape(6, base_shape / 8);
+  modifier->modifyFullyConnectedShape(8, base_shape / 8);
+  uint32_t num_parameters_50 = modifier->calcModelParams(false);
+  Serial1.print("Num Params 50%: "); Serial1.println(num_parameters_50);
+  Serial.print("Num Params 50%: "); Serial.println(num_parameters_50);
   float duration_50 = measureTimeFC(interpreter);
   Serial1.print("Duration 50%: "); Serial1.println(duration_50);
   Serial.print("Duration 50%: "); Serial.println(duration_50);
 
   modifier->modifyFullyConnectedShape(0, base_shape / 16);
-  // modifier->modifyFullyConnectedShape(2, base_shape / 16);
-  // modifier->modifyFullyConnectedShape(4, base_shape / 16);
-  // modifier->modifyFullyConnectedShape(6, base_shape / 16);
-  // modifier->modifyFullyConnectedShape(8, base_shape / 16);
-
+  modifier->modifyFullyConnectedShape(2, base_shape / 16);
+  modifier->modifyFullyConnectedShape(4, base_shape / 16);
+  modifier->modifyFullyConnectedShape(6, base_shape / 16);
+  modifier->modifyFullyConnectedShape(8, base_shape / 16);
+  uint32_t num_parameters_25 = modifier->calcModelParams(false);
+  Serial1.print("Num Params 25%: "); Serial1.println(num_parameters_25);
+  Serial.print("Num Params 25%: "); Serial.println(num_parameters_25);
   float duration_25 = measureTimeFC(interpreter);
   Serial1.print("Duration 25%: "); Serial1.println(duration_25);
   Serial.print("Duration 25%: "); Serial.println(duration_25);
 
   modifier->modifyFullyConnectedShape(0, base_shape / 32);
-  // modifier->modifyFullyConnectedShape(2, base_shape / 32);
-  // modifier->modifyFullyConnectedShape(4, base_shape / 32);
-  // modifier->modifyFullyConnectedShape(6, base_shape / 32);
-  // modifier->modifyFullyConnectedShape(8, base_shape / 32);
-
+  modifier->modifyFullyConnectedShape(2, base_shape / 32);
+  modifier->modifyFullyConnectedShape(4, base_shape / 32);
+  modifier->modifyFullyConnectedShape(6, base_shape / 32);
+  modifier->modifyFullyConnectedShape(8, base_shape / 32);
+  uint32_t num_parameters_12 = modifier->calcModelParams(false);
+  Serial1.print("Num Params 12.5%: "); Serial1.println(num_parameters_12);
+  Serial.print("Num Params 12.5%: "); Serial.println(num_parameters_12);
   float duration_12 = measureTimeFC(interpreter);
   Serial1.print("Duration 12.5%: "); Serial1.println(duration_12);
   Serial.print("Duration 12.5%: "); Serial.println(duration_12);
@@ -205,7 +221,7 @@ void setup() {
   tflite::InitializeTarget();
 
   {
-    const tflite::Model* model_const = tflite::GetModel(third_model_activations_400_tflite);
+    const tflite::Model* model_const = tflite::GetModel(second_model_activations_tflite);
     model = const_cast<tflite::Model*>(model_const);
   }
 

@@ -28,7 +28,8 @@ class ModelModifier
     int32_t getOutputTensorIndex(const uint32_t& target_op_index);
     int32_t getWeightTensorIndex(const uint32_t& target_op_index);
     int8_t setTensorShape(const int32_t tensor_index, const int32_t new_shape, const uint32_t shape_index, int32_t &shape_diff);
-
+    uint32_t calcModelParams(bool is_cnn);
+    
     ModelModifier(tflite::Model* model);
     ~ModelModifier();
 };
